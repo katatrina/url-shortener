@@ -1,0 +1,11 @@
+# IDE
+.idea/
+.vscode/
+
+# Secrets
+.env
+
+# Go
+vendor/
+*.exe
+tmp/
