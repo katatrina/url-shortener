@@ -42,7 +42,7 @@ type Service struct {
 	baseURL    string // e.g. "http://localhost:8080" - used to build full short URLs
 }
 
-func NewService(
+func New(
 	urlRepo URLRepository,
 	userRepo UserRepository,
 	tokenMaker TokenMaker,

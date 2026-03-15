@@ -9,7 +9,7 @@ type URL struct {
 	UserID      *string    `db:"user_id"`
 	ClickCount  int64      `db:"click_count"`
 	ExpiresAt   *time.Time `db:"expires_at"`
-	CreateAt    time.Time  `db:"create_at"`
+	CreatedAt   time.Time  `db:"created_at"`
 	UpdatedAt   time.Time  `db:"updated_at"`
 	DeletedAt   *time.Time `db:"deleted_at"`
 }

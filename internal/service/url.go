@@ -61,7 +61,7 @@ func (s *Service) ShortenURL(ctx context.Context, arg model.ShortenURLParams) (*
 		UserID:      arg.UserID,
 		ClickCount:  0,
 		ExpiresAt:   arg.ExpiresAt,
-		CreateAt:    now,
+		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
 
