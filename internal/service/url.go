@@ -1,0 +1,141 @@
+package service
+
+import (
+	"context"
+	"fmt"
+	"net/url"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/katatrina/url-shortener/internal/model"
+	"github.com/katatrina/url-shortener/internal/shortcode"
+)
+
+// maxGenerateAttempts is the number of times we retry generating a short code
+// before giving up. With 62^7 combinations, hitting this limit means something
+// is seriously wrong with the random source.
+const maxGenerateAttempts = 5
+
+func (s *Service) ShortenURL(ctx context.Context, arg model.ShortenURLParams) (*model.URL, error) {
+	// Validate original URL format.
+	// TODO: We can move this validation to handler layer later.
+	if _, err := url.ParseRequestURI(arg.OriginalURL); err != nil {
+		return nil, model.ErrInvalidURL
+	}
+
+	var code string
+
+	if arg.CustomAlias != "" { // User wants a custom short code.
+		if !shortcode.IsValid(arg.CustomAlias) {
+			return nil, model.ErrInvalidShortCode
+		}
+
+		exists, err := s.urlRepo.ShortCodeExists(ctx, arg.CustomAlias)
+		if err != nil {
+			return nil, err
+		}
+		if exists {
+			return nil, model.ErrShortCodeTaken
+		}
+
+		code = arg.CustomAlias
+	} else {
+		// Generate a random short code, retry on collision.
+		var err error
+		code, err = s.generateUniqueCode(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	id, err := uuid.NewV7()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate URL ID: %w", err)
+	}
+
+	now := time.Now()
+	newURL := model.URL{
+		ID:          id.String(),
+		ShortCode:   code,
+		OriginalURL: arg.OriginalURL,
+		UserID:      arg.UserID,
+		ClickCount:  0,
+		ExpiresAt:   arg.ExpiresAt,
+		CreateAt:    now,
+		UpdatedAt:   now,
+	}
+
+	created, err := s.urlRepo.Create(ctx, newURL)
+	if err != nil {
+		return nil, err
+	}
+
+	return created, nil
+}
+
+// generateUniqueCode generates a random short code and checks for collisions.
+// Retries up to maxGenerateAttempts times.
+func (s *Service) generateUniqueCode(ctx context.Context) (string, error) {
+	for range maxGenerateAttempts {
+		code := shortcode.Generate()
+
+		exists, err := s.urlRepo.ShortCodeExists(ctx, code)
+		if err != nil {
+			return "", err
+		}
+
+		if !exists {
+			return code, nil
+		}
+
+		// Collision - extremely rare, but retry.
+	}
+
+	return "", fmt.Errorf("failed to generate unique short code after %d attempts", maxGenerateAttempts)
+}
+
+// BuildShortURL returns the full URL for a shortcode.
+// e.g. "https://localhost:8080/abc123".
+func (s *Service) BuildShortURL(shortCode string) string {
+	return fmt.Sprintf("")
+}
+
+func (s *Service) GetUserURL(ctx context.Context, shortCode, userID string) (*model.URL, error) {
+	u, err := s.urlRepo.FindByShortCode(ctx, shortCode)
+	if err != nil {
+		return nil, err
+	}
+
+	if u.UserID == nil || *u.UserID != userID {
+		return nil, model.ErrURLOwnerMismatch
+	}
+
+	return u, nil
+}
+
+func (s *Service) ListUserURLs(ctx context.Context, userID string, limit, offset int) ([]model.URL, int64, error) {
+	urls, err := s.urlRepo.ListByUserID(ctx, userID, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	total, err := s.urlRepo.CountByUserID(ctx, userID)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return urls, total, nil
+}
+
+func (s *Service) DeleteUserURL(ctx context.Context, shortCode, userID string) error {
+	u, err := s.urlRepo.FindByShortCode(ctx, shortCode)
+	if err != nil {
+		return err
+	}
+
+	if u.UserID == nil || *u.UserID != userID {
+		return model.ErrURLOwnerMismatch
+	}
+
+	return s.urlRepo.Delete(ctx, u.ID)
+}

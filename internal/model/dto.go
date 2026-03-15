@@ -2,7 +2,7 @@ package model
 
 import "time"
 
-type CreateURLParams struct {
+type ShortenURLParams struct {
 	OriginalURL string
 	CustomAlias string // optional: user-chosen short code
 	UserID      *string
