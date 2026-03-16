@@ -2,9 +2,9 @@ package service
 
 import (
 	"context"
-	"time"
 
 	"github.com/katatrina/url-shortener/internal/model"
+	"github.com/katatrina/url-shortener/internal/token"
 )
 
 type URLRepository interface {
@@ -23,21 +23,16 @@ type UserRepository interface {
 	FindByID(ctx context.Context, id string) (*model.User, error)
 }
 
-type TokenMaker interface {
-	CreateToken(userID string) (string, time.Time, error)
-	VerifyToken(tokenStr string) (string, error)
-}
-
 type Service struct {
 	urlRepo    URLRepository
 	userRepo   UserRepository
-	tokenMaker TokenMaker
+	tokenMaker token.TokenMaker
 }
 
 func New(
 	urlRepo URLRepository,
 	userRepo UserRepository,
-	tokenMaker TokenMaker,
+	tokenMaker token.TokenMaker,
 ) *Service {
 	return &Service{
 		urlRepo,

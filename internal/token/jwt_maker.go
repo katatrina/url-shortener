@@ -1,4 +1,4 @@
-package service
+package token
 
 import (
 	"errors"
@@ -14,12 +14,6 @@ const (
 	MinTokenExpiry   = 5 * time.Minute
 )
 
-var (
-	ErrTokenExpired = errors.New("token has expired")
-	ErrTokenInvalid = errors.New("token is invalid")
-)
-
-// JWTMaker implements TokenMaker using HS256.
 type JWTMaker struct {
 	secretKey []byte
 	expiry    time.Duration
@@ -52,8 +46,8 @@ func (m *JWTMaker) CreateToken(userID string) (string, time.Time, error) {
 		ID:        uuid.NewString(),
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenStr, err := token.SignedString(m.secretKey)
+	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenStr, err := t.SignedString(m.secretKey)
 	if err != nil {
 		return "", time.Time{}, err
 	}
@@ -62,10 +56,10 @@ func (m *JWTMaker) CreateToken(userID string) (string, time.Time, error) {
 }
 
 func (m *JWTMaker) VerifyToken(tokenString string) (string, error) {
-	token, err := jwt.ParseWithClaims(
+	t, err := jwt.ParseWithClaims(
 		tokenString,
 		&jwt.RegisteredClaims{},
-		func(token *jwt.Token) (any, error) {
+		func(t *jwt.Token) (any, error) {
 			return m.secretKey, nil
 		},
 		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
@@ -78,7 +72,7 @@ func (m *JWTMaker) VerifyToken(tokenString string) (string, error) {
 		return "", ErrTokenInvalid
 	}
 
-	claims, ok := token.Claims.(*jwt.RegisteredClaims)
+	claims, ok := t.Claims.(*jwt.RegisteredClaims)
 	if !ok {
 		return "", ErrTokenInvalid
 	}
