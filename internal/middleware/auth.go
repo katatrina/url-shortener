@@ -45,7 +45,7 @@ func Auth(tokenMaker service.TokenMaker) gin.HandlerFunc {
 			return
 		}
 
-		claims, err := tokenMaker.VerifyToken(tokenStr)
+		userID, err := tokenMaker.VerifyToken(tokenStr)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"error": "invalid or expired token",
@@ -53,7 +53,7 @@ func Auth(tokenMaker service.TokenMaker) gin.HandlerFunc {
 			return
 		}
 
-		c.Set(AuthUserIDKey, claims.UserID)
+		c.Set(AuthUserIDKey, userID)
 		c.Next()
 	}
 }
