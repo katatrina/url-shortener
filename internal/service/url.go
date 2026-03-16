@@ -16,21 +16,21 @@ import (
 // is seriously wrong with the random source.
 const maxGenerateAttempts = 5
 
-func (s *Service) ShortenURL(ctx context.Context, arg model.ShortenURLParams) (*model.URL, error) {
+func (s *Service) ShortenURL(ctx context.Context, params model.ShortenURLParams) (*model.URL, error) {
 	// Validate original URL format.
 	// TODO: We can move this validation to handler layer later.
-	if _, err := url.ParseRequestURI(arg.OriginalURL); err != nil {
+	if _, err := url.ParseRequestURI(params.OriginalURL); err != nil {
 		return nil, model.ErrInvalidURL
 	}
 
 	var code string
 
-	if arg.CustomAlias != "" { // User wants a custom short code.
-		if !shortcode.IsValid(arg.CustomAlias) {
+	if params.CustomAlias != "" { // User wants a custom short code.
+		if !shortcode.IsValid(params.CustomAlias) {
 			return nil, model.ErrInvalidShortCode
 		}
 
-		exists, err := s.urlRepo.ShortCodeExists(ctx, arg.CustomAlias)
+		exists, err := s.urlRepo.ShortCodeExists(ctx, params.CustomAlias)
 		if err != nil {
 			return nil, err
 		}
@@ -38,7 +38,7 @@ func (s *Service) ShortenURL(ctx context.Context, arg model.ShortenURLParams) (*
 			return nil, model.ErrShortCodeTaken
 		}
 
-		code = arg.CustomAlias
+		code = params.CustomAlias
 	} else {
 		// Generate a random short code, retry on collision.
 		var err error
@@ -57,10 +57,10 @@ func (s *Service) ShortenURL(ctx context.Context, arg model.ShortenURLParams) (*
 	newURL := model.URL{
 		ID:          id.String(),
 		ShortCode:   code,
-		OriginalURL: arg.OriginalURL,
-		UserID:      arg.UserID,
+		OriginalURL: params.OriginalURL,
+		UserID:      params.UserID,
 		ClickCount:  0,
-		ExpiresAt:   arg.ExpiresAt,
+		ExpiresAt:   params.ExpiresAt,
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
@@ -92,12 +92,6 @@ func (s *Service) generateUniqueCode(ctx context.Context) (string, error) {
 	}
 
 	return "", fmt.Errorf("failed to generate unique short code after %d attempts", maxGenerateAttempts)
-}
-
-// BuildShortURL returns the full URL for a shortcode.
-// e.g. "https://localhost:8080/abc123".
-func (s *Service) BuildShortURL(shortCode string) string {
-	return fmt.Sprintf("")
 }
 
 func (s *Service) GetUserURL(ctx context.Context, shortCode, userID string) (*model.URL, error) {

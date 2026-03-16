@@ -11,8 +11,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func (s *Service) Register(ctx context.Context, arg model.CreateUserParams) (*model.User, error) {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(arg.Password), bcrypt.DefaultCost)
+func (s *Service) Register(ctx context.Context, params model.CreateUserParams) (*model.User, error) {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(params.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
@@ -25,8 +25,8 @@ func (s *Service) Register(ctx context.Context, arg model.CreateUserParams) (*mo
 	now := time.Now()
 	user := model.User{
 		ID:           userID.String(),
-		Email:        arg.Email,
-		DisplayName:  arg.DisplayName,
+		Email:        params.Email,
+		DisplayName:  params.DisplayName,
 		PasswordHash: string(hashedPassword),
 		CreatedAt:    now,
 		UpdatedAt:    now,
@@ -39,8 +39,8 @@ func (s *Service) Register(ctx context.Context, arg model.CreateUserParams) (*mo
 	return created, nil
 }
 
-func (s *Service) Login(ctx context.Context, arg model.LoginUserParams) (*model.LoginUserResult, error) {
-	user, err := s.userRepo.FindByEmail(ctx, arg.Email)
+func (s *Service) Login(ctx context.Context, params model.LoginUserParams) (*model.LoginUserResult, error) {
+	user, err := s.userRepo.FindByEmail(ctx, params.Email)
 	if err != nil {
 		if errors.Is(err, model.ErrUserNotFound) {
 			return nil, model.ErrIncorrectCredentials
@@ -48,7 +48,7 @@ func (s *Service) Login(ctx context.Context, arg model.LoginUserParams) (*model.
 		return nil, err
 	}
 
-	if err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(arg.Password)); err != nil {
+	if err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(params.Password)); err != nil {
 		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
 			return nil, model.ErrIncorrectCredentials
 		}

@@ -61,7 +61,7 @@ func (m *JWTMaker) CreateToken(userID string) (string, time.Time, error) {
 	return tokenStr, expiresAt, nil
 }
 
-func (m *JWTMaker) VerifyToken(tokenString string) (*TokenClaims, error) {
+func (m *JWTMaker) VerifyToken(tokenString string) (string, error) {
 	token, err := jwt.ParseWithClaims(
 		tokenString,
 		&jwt.RegisteredClaims{},
@@ -73,18 +73,15 @@ func (m *JWTMaker) VerifyToken(tokenString string) (*TokenClaims, error) {
 
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
-			return nil, ErrTokenExpired
+			return "", ErrTokenExpired
 		}
-		return nil, ErrTokenInvalid
+		return "", ErrTokenInvalid
 	}
 
 	claims, ok := token.Claims.(*jwt.RegisteredClaims)
 	if !ok {
-		return nil, ErrTokenInvalid
+		return "", ErrTokenInvalid
 	}
 
-	return &TokenClaims{
-		UserID:    claims.Subject,
-		ExpiresAt: claims.ExpiresAt.Time,
-	}, nil
+	return claims.Subject, nil
 }

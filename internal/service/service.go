@@ -25,33 +25,23 @@ type UserRepository interface {
 
 type TokenMaker interface {
 	CreateToken(userID string) (string, time.Time, error)
-	VerifyToken(tokenStr string) (*TokenClaims, error)
-}
-
-// TokenClaims contains payload extracted from a valid token.
-// It contains only minimal info.
-type TokenClaims struct {
-	UserID    string
-	ExpiresAt time.Time
+	VerifyToken(tokenStr string) (string, error)
 }
 
 type Service struct {
 	urlRepo    URLRepository
 	userRepo   UserRepository
 	tokenMaker TokenMaker
-	baseURL    string // e.g. "http://localhost:8080" - used to build full short URLs
 }
 
 func New(
 	urlRepo URLRepository,
 	userRepo UserRepository,
 	tokenMaker TokenMaker,
-	baseURL string,
 ) *Service {
 	return &Service{
 		urlRepo,
 		userRepo,
 		tokenMaker,
-		baseURL,
 	}
 }
