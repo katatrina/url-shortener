@@ -12,7 +12,9 @@ import (
 	"github.com/katatrina/url-shortener/internal/handler"
 	"github.com/katatrina/url-shortener/internal/middleware"
 	"github.com/katatrina/url-shortener/internal/repository"
+	"github.com/katatrina/url-shortener/internal/response"
 	"github.com/katatrina/url-shortener/internal/service"
+	"github.com/katatrina/url-shortener/internal/token"
 )
 
 func main() {
@@ -35,17 +37,21 @@ func main() {
 	}
 	log.Println("Connected to database successfully")
 
-	tokenMaker, err := service.NewJWTMaker([]byte(cfg.JWTSecret), cfg.JWTExpiry)
+	tokenMaker, err := token.NewJWTMaker([]byte(cfg.JWTSecret), cfg.JWTExpiry)
 	if err != nil {
 		log.Fatalf("Failed to create token maker: %v", err)
 	}
 
 	urlRepo := repository.NewURLRepository(db)
 	userRepo := repository.NewUserRepository(db)
-	svc := service.New(urlRepo, userRepo, tokenMaker, cfg.BaseURL)
+	svc := service.New(urlRepo, userRepo, tokenMaker)
 	h := handler.New(svc, cfg.BaseURL)
 
 	router := gin.Default()
+	router.NoRoute(func(c *gin.Context) {
+		response.NotFound(c, response.CodeRouteNotFound,
+			"The requested endpoint does not exist")
+	})
 
 	// Redirect — root level must be short URL
 	router.GET("/:code", h.Redirect)
