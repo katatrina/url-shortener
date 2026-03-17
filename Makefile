@@ -1,4 +1,4 @@
-.PHONY: migrate-up migrate-down server
+.PHONY: migrate-up migrate-down server mockgen
 
 migrate-up:
 	migrate -path migrations -database "postgres://root:secret@localhost:5432/url_shortener?sslmode=disable" -verbose up
@@ -8,3 +8,9 @@ migrate-down:
 
 server:
 	go run ./cmd/api
+
+mockgen:
+	go generate ./internal/mock/...
+
+service-test:
+	go test ./internal/service/ -v

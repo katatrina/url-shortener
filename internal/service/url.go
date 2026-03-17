@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,12 +16,6 @@ import (
 const maxGenerateAttempts = 5
 
 func (s *Service) ShortenURL(ctx context.Context, params model.ShortenURLParams) (*model.URL, error) {
-	// Validate original URL format.
-	// TODO: We can move this validation to handler layer later.
-	if _, err := url.ParseRequestURI(params.OriginalURL); err != nil {
-		return nil, model.ErrInvalidURL
-	}
-
 	var code string
 
 	if params.CustomAlias != "" { // User wants a custom short code.
