@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/katatrina/url-shortener/internal/model"
+	"github.com/katatrina/url-shortener/internal/response"
 )
 
 func (h *Handler) Redirect(c *gin.Context) {
@@ -16,12 +17,12 @@ func (h *Handler) Redirect(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, model.ErrURLNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": "short URL not found"})
+			response.NotFound(c, response.CodeURLNotFound, "Short URL not found")
 		case errors.Is(err, model.ErrURLExpired):
-			c.JSON(http.StatusGone, gin.H{"error": "this short URL has expired"})
+			response.BadRequest(c, response.CodeURLExpired, "This short URL has expired")
 		default:
 			log.Printf("[ERROR] failed to resolve short URL: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			response.InternalServerError(c)
 		}
 		return
 	}

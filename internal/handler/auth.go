@@ -3,16 +3,17 @@ package handler
 import (
 	"errors"
 	"log"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/katatrina/url-shortener/internal/model"
+	"github.com/katatrina/url-shortener/internal/request"
+	"github.com/katatrina/url-shortener/internal/response"
 )
 
 func (h *Handler) Register(c *gin.Context) {
 	var req RegisterRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+	if err := request.ShouldBindJSON(c, &req); err != nil {
+		response.HandleJSONBindingError(c, err)
 		return
 	}
 
@@ -24,21 +25,21 @@ func (h *Handler) Register(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, model.ErrEmailAlreadyExists):
-			c.JSON(http.StatusConflict, gin.H{"error": "email already exists"})
+			response.Conflict(c, response.CodeEmailAlreadyExists, "Email already exists")
 		default:
 			log.Printf("[ERROR] failed to register user: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			response.InternalServerError(c)
 		}
 		return
 	}
 
-	c.JSON(http.StatusCreated, newUserResponse(user))
+	response.Created(c, newUserResponse(user), "User registered successfully")
 }
 
 func (h *Handler) Login(c *gin.Context) {
 	var req LoginRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+	if err := request.ShouldBindJSON(c, &req); err != nil {
+		response.HandleJSONBindingError(c, err)
 		return
 	}
 
@@ -49,17 +50,17 @@ func (h *Handler) Login(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, model.ErrIncorrectCredentials):
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "incorrect email or password"})
+			response.Unauthorized(c, response.CodeCredentialsInvalid, "Incorrect email or password")
 		default:
 			log.Printf("[ERROR] failed to login: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			response.InternalServerError(c)
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, LoginResponse{
+	response.OK(c, LoginResponse{
 		AccessToken:          result.AccessToken,
 		AccessTokenExpiresAt: result.AccessTokenExpiresAt.Unix(),
 		User:                 newUserResponse(result.User),
-	})
+	}, "Login successful")
 }

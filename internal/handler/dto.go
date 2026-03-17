@@ -5,19 +5,19 @@ import "github.com/katatrina/url-shortener/internal/model"
 // -- Requests --
 
 type ShortenURLRequest struct {
-	OriginalURL string  `json:"originalUrl" binding:"required,url"`
-	CustomAlias *string `json:"customAlias,omitempty"`
+	OriginalURL string  `json:"originalUrl" validate:"required,url"`
+	CustomAlias *string `json:"customAlias"`
 }
 
 type RegisterRequest struct {
-	Email       string `json:"email" binding:"required,email,max=255"`
-	DisplayName string `json:"displayName" binding:"required,min=2,max=100"`
-	Password    string `json:"password" binding:"required,min=8,max=72"`
+	Email       string `json:"email" validate:"required,email,max=255" normalize:"trim,lower"`
+	DisplayName string `json:"displayName" validate:"required,min=2,max=100" normalize:"trim,singlespace"`
+	Password    string `json:"password" validate:"required,min=8,maxbytes=72"`
 }
 
 type LoginRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required"`
+	Email    string `json:"email" validate:"required,email" normalize:"trim,lower"`
+	Password string `json:"password" validate:"required"`
 }
 
 // -- Responses --

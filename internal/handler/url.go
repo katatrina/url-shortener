@@ -3,18 +3,18 @@ package handler
 import (
 	"errors"
 	"log"
-	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/katatrina/url-shortener/internal/middleware"
 	"github.com/katatrina/url-shortener/internal/model"
+	"github.com/katatrina/url-shortener/internal/request"
+	"github.com/katatrina/url-shortener/internal/response"
 )
 
 func (h *Handler) ShortenURL(c *gin.Context) {
 	var req ShortenURLRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+	if err := request.ShouldBindJSON(c, &req); err != nil {
+		response.HandleJSONBindingError(c, err)
 		return
 	}
 
@@ -31,40 +31,29 @@ func (h *Handler) ShortenURL(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, model.ErrInvalidURL):
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid URL format"})
+			response.BadRequest(c, response.CodeInvalidURL, "Invalid URL format")
 		case errors.Is(err, model.ErrInvalidShortCode):
-			c.JSON(http.StatusBadRequest, gin.H{"error": "custom alias contains invalid characters (only a-z, A-Z, 0-9)"})
+			response.BadRequest(c, response.CodeInvalidShortCode, "Custom alias contains invalid characters (only a-z, A-Z, 0-9)")
 		case errors.Is(err, model.ErrShortCodeTaken):
-			c.JSON(http.StatusConflict, gin.H{"error": "custom alias is already taken"})
+			response.Conflict(c, response.CodeShortCodeTaken, "Custom alias is already taken")
 		default:
 			log.Printf("[ERROR] failed to shorten URL: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			response.InternalServerError(c)
 		}
 		return
 	}
 
-	c.JSON(http.StatusCreated, newURLResponse(url, h.baseURL))
+	response.Created(c, newURLResponse(url, h.baseURL), "URL shortened successfully")
 }
 
 func (h *Handler) ListUserURLs(c *gin.Context) {
 	userID := middleware.MustGetAuthUserID(c)
+	pagination := request.ParsePaginationParams(c)
 
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
-
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 10
-	}
-
-	offset := (page - 1) * pageSize
-
-	urls, total, err := h.service.ListUserURLs(c.Request.Context(), userID, pageSize, offset)
+	urls, total, err := h.service.ListUserURLs(c.Request.Context(), userID, pagination.Limit(), pagination.Offset())
 	if err != nil {
 		log.Printf("[ERROR] failed to list user URLs: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		response.InternalServerError(c)
 		return
 	}
 
@@ -73,12 +62,7 @@ func (h *Handler) ListUserURLs(c *gin.Context) {
 		resp[i] = newURLResponse(&urls[i], h.baseURL)
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"data":     resp,
-		"total":    total,
-		"page":     page,
-		"pageSize": pageSize,
-	})
+	response.OKWithPagination(c, resp, "URLs retrieved successfully", pagination.Page, pagination.PageSize, total)
 }
 
 func (h *Handler) GetUserURL(c *gin.Context) {
@@ -90,15 +74,15 @@ func (h *Handler) GetUserURL(c *gin.Context) {
 		switch {
 		case errors.Is(err, model.ErrURLNotFound),
 			errors.Is(err, model.ErrURLOwnerMismatch):
-			c.JSON(http.StatusNotFound, gin.H{"error": "URL not found"})
+			response.NotFound(c, response.CodeURLNotFound, "URL not found")
 		default:
 			log.Printf("[ERROR] failed to get URL: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			response.InternalServerError(c)
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, newURLResponse(url, h.baseURL))
+	response.OK(c, newURLResponse(url, h.baseURL), "URL retrieved successfully")
 }
 
 func (h *Handler) DeleteUserURL(c *gin.Context) {
@@ -110,13 +94,13 @@ func (h *Handler) DeleteUserURL(c *gin.Context) {
 		switch {
 		case errors.Is(err, model.ErrURLNotFound),
 			errors.Is(err, model.ErrURLOwnerMismatch):
-			c.JSON(http.StatusNotFound, gin.H{"error": "URL not found"})
+			response.NotFound(c, response.CodeURLNotFound, "URL not found")
 		default:
 			log.Printf("[ERROR] failed to delete URL: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			response.InternalServerError(c)
 		}
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	response.NoContent(c)
 }
