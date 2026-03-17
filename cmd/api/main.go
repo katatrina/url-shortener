@@ -53,20 +53,19 @@ func main() {
 			"The requested endpoint does not exist")
 	})
 
-	// Redirect — root level must be short URL
 	router.GET("/:code", h.Redirect)
 
-	api := router.Group("/api/v1")
+	v1 := router.Group("/api/v1")
 	{
 		// Public: shorten URL (works with or without auth)
-		api.POST("/shorten", h.ShortenURL)
+		v1.POST("/shorten", h.ShortenURL)
 
 		// Auth
-		api.POST("/auth/register", h.Register)
-		api.POST("/auth/login", h.Login)
+		v1.POST("/auth/register", h.Register)
+		v1.POST("/auth/login", h.Login)
 
 		// Protected: manage auth user URLs
-		protected := api.Group("/urls")
+		protected := v1.Group("/urls")
 		protected.Use(middleware.Auth(tokenMaker))
 		{
 			protected.GET("", h.ListUserURLs)

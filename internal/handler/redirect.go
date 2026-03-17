@@ -8,10 +8,17 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/katatrina/url-shortener/internal/model"
 	"github.com/katatrina/url-shortener/internal/response"
+	"github.com/katatrina/url-shortener/internal/shortcode"
 )
 
 func (h *Handler) Redirect(c *gin.Context) {
 	shortCode := c.Param("code")
+
+	// Filter out junk requests early — no DB hit needed.
+	if !shortcode.IsValid(shortCode) {
+		response.NotFound(c, response.CodeURLNotFound, "Short URL not found")
+		return
+	}
 
 	originalURL, err := h.service.Resolve(c.Request.Context(), shortCode)
 	if err != nil {
