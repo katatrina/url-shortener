@@ -33,6 +33,10 @@ func BadRequestWithErrors(c *gin.Context, code ErrorCode, message string, errors
 	c.JSON(http.StatusBadRequest, New().Error(code, message).WithErrors(errors).Build())
 }
 
+func Gone(c *gin.Context, code ErrorCode, message string) {
+	c.JSON(http.StatusGone, New().Error(code, message).Build())
+}
+
 func Unauthorized(c *gin.Context, code ErrorCode, message string) {
 	c.JSON(http.StatusUnauthorized, New().Error(code, message).Build())
 }

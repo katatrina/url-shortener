@@ -26,7 +26,7 @@ func (h *Handler) Redirect(c *gin.Context) {
 		case errors.Is(err, model.ErrURLNotFound):
 			response.NotFound(c, response.CodeURLNotFound, "Short URL not found")
 		case errors.Is(err, model.ErrURLExpired):
-			response.BadRequest(c, response.CodeURLExpired, "This short URL has expired")
+			response.Gone(c, response.CodeURLExpired, "This short URL has expired")
 		default:
 			log.Printf("[ERROR] failed to resolve short URL: %v", err)
 			response.InternalServerError(c)
