@@ -58,14 +58,14 @@ func main() {
 	v1 := router.Group("/api/v1")
 	{
 		// Public: shorten URL (works with or without auth)
-		v1.POST("/shorten", h.ShortenURL)
+		v1.POST("/shorten", middleware.OptionalAuth(tokenMaker), h.ShortenURL)
 
 		// Auth
 		v1.POST("/auth/register", h.Register)
 		v1.POST("/auth/login", h.Login)
 
 		// Protected: manage auth user URLs
-		protected := v1.Group("/urls")
+		protected := v1.Group("/me/urls")
 		protected.Use(middleware.Auth(tokenMaker))
 		{
 			protected.GET("", h.ListUserURLs)
