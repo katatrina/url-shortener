@@ -20,6 +20,7 @@ func (h *Handler) ShortenURL(c *gin.Context) {
 
 	arg := model.ShortenURLParams{
 		OriginalURL: req.OriginalURL,
+		CustomAlias: req.CustomAlias,
 		UserID:      middleware.GetAuthUserID(c),
 	}
 
