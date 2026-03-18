@@ -15,7 +15,7 @@ func registerCustomRules() {
 
 	registerTranslation("max_bytes", "{0} is too long")
 	registerTranslation("short_code", "{0} must contain only letters and numbers")
-	registerTranslation("strong_pass", "{0} must include uppercase, lowercase, a number, and a special character")
+	registerTranslation("strong_pass", "{0} must include at least one uppercase, one lowercase, one number, and one special character")
 }
 
 // validateMaxBytes checks byte length (not rune length).

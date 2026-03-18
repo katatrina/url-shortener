@@ -18,15 +18,15 @@ type PaginationParams struct {
 // NewPaginationParams creates PaginationParams with validation.
 // Invalid values are replaced with defaults.
 func NewPaginationParams(page, pageSize int) PaginationParams {
-	if page < 1 {
+	if page < DefaultPage {
 		page = DefaultPage
 	}
 
-	if pageSize < 1 {
+	if pageSize < DefaultPageSize {
 		pageSize = DefaultPageSize
 	}
 
-	if pageSize > 100 {
+	if pageSize > MaxPageSize {
 		pageSize = MaxPageSize
 	}
 

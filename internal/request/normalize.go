@@ -8,7 +8,7 @@ import (
 // NormalizeStrings applies normalization rules to string and *string fields.
 // Supported rules: trim, lower, upper, and single space.
 // Currently, it does not support nested struct.
-func NormalizeStrings(s interface{}) {
+func NormalizeStrings(s any) {
 	v := reflect.ValueOf(s)
 	if v.Kind() == reflect.Ptr {
 		v = v.Elem()

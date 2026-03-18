@@ -11,14 +11,14 @@ import (
 
 func (r *URLRepository) Create(ctx context.Context, url model.URL) (*model.URL, error) {
 	query := `
-		INSERT INTO urls (id, short_code, original_url, user_id, click_count, expires_at, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO urls (id, short_code, original_url, user_id, click_count, expires_at, created_at, updated_at, deleted_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id, short_code, original_url, user_id, click_count, expires_at, created_at, updated_at, deleted_at
 	`
 
 	rows, _ := r.db.Query(ctx, query,
 		url.ID, url.ShortCode, url.OriginalURL, url.UserID,
-		url.ClickCount, url.ExpiresAt, url.CreatedAt, url.UpdatedAt,
+		url.ClickCount, url.ExpiresAt, url.CreatedAt, url.UpdatedAt, url.DeletedAt,
 	)
 
 	created, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[model.URL])
@@ -66,8 +66,16 @@ func (r *URLRepository) IncrementClickCount(ctx context.Context, id string) erro
 		WHERE id = $1 AND deleted_at IS NULL
 	`
 
-	_, err := r.db.Exec(ctx, query, id)
-	return err
+	result, err := r.db.Exec(ctx, query, id)
+	if err != nil {
+		return err
+	}
+
+	if result.RowsAffected() == 0 {
+		return model.ErrURLNotFound
+	}
+
+	return nil
 }
 
 func (r *URLRepository) ListByUserID(ctx context.Context, userID string, limit, offset int) ([]model.URL, error) {

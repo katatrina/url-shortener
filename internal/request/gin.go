@@ -28,7 +28,7 @@ func ParsePaginationParams(c *gin.Context) PaginationParams {
 //	    response.HandleJSONBindingError(c, err)
 //	    return
 //	}
-func ShouldBindJSON(c *gin.Context, obj interface{}) error {
+func ShouldBindJSON(c *gin.Context, obj any) error {
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		return err
