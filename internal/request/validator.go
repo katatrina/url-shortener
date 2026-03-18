@@ -24,6 +24,7 @@ const (
 	FieldCodeInvalidFormat FieldErrorCode = "INVALID_FORMAT"
 	FieldCodeMinValue      FieldErrorCode = "MIN_VALUE"
 	FieldCodeMaxValue      FieldErrorCode = "MAX_VALUE"
+	FieldCodeWeakPassword  FieldErrorCode = "WEAK_PASSWORD"
 )
 
 // FieldError represents a validation error for a specific field.
@@ -80,6 +81,8 @@ func mapValidationTag(tag string) FieldErrorCode {
 		return FieldCodeMinValue
 	case "max", "lte":
 		return FieldCodeMaxValue
+	case "strong_pass":
+		return FieldCodeWeakPassword
 
 	default:
 		return FieldErrorCode(strings.ToUpper(tag))

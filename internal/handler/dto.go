@@ -12,7 +12,7 @@ type ShortenURLRequest struct {
 type RegisterRequest struct {
 	Email       string `json:"email" validate:"required,email,max=255" normalize:"trim,lower"`
 	DisplayName string `json:"displayName" validate:"required,min=2,max=100" normalize:"trim,single_space"`
-	Password    string `json:"password" validate:"required,min=8,max_bytes=72"`
+	Password    string `json:"password" validate:"required,min=8,max_bytes=72,strong_pass"`
 }
 
 type LoginRequest struct {
