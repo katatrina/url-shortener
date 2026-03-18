@@ -6,13 +6,13 @@ import "github.com/katatrina/url-shortener/internal/model"
 
 type ShortenURLRequest struct {
 	OriginalURL string `json:"originalUrl" validate:"required,http_url,max=2048" normalize:"trim"`
-	CustomAlias string `json:"customAlias" validate:"omitempty,shortcode,min=3,max=30" normalize:"trim"`
+	CustomAlias string `json:"customAlias" validate:"omitempty,short_code,min=3,max=30" normalize:"trim"`
 }
 
 type RegisterRequest struct {
 	Email       string `json:"email" validate:"required,email,max=255" normalize:"trim,lower"`
-	DisplayName string `json:"displayName" validate:"required,min=2,max=100" normalize:"trim,singlespace"`
-	Password    string `json:"password" validate:"required,min=8,maxbytes=72"`
+	DisplayName string `json:"displayName" validate:"required,min=2,max=100" normalize:"trim,single_space"`
+	Password    string `json:"password" validate:"required,min=8,max_bytes=72"`
 }
 
 type LoginRequest struct {

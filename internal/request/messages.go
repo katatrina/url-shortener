@@ -9,15 +9,13 @@ import (
 
 func registerCustomMessages() {
 	messages := map[string]string{
-		"required":      "{0} is required",
-		"required_with": "{0} is required when {1} is present",
-		"email":         "{0} must be a valid email address",
-		"min":           "{0} must be at least {1} characters",
-		"max":           "{0} must be at most {1} characters",
-		"gte":           "{0} must be at least {1}",
-		"lte":           "{0} must be at most {1}",
-		"http_url":      "{0} must be a valid HTTP or HTTPS URL",
-		"alphanum":      "{0} must contain only letters and numbers",
+		"required": "{0} is required",
+		"email":    "{0} must be a valid email address",
+		"min":      "{0} must be at least {1} characters",
+		"max":      "{0} must be at most {1} characters",
+		"gte":      "{0} must be at least {1}",
+		"lte":      "{0} must be at most {1}",
+		"http_url": "{0} must be a valid HTTP or HTTPS URL",
 	}
 
 	for tag, msg := range messages {

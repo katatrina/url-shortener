@@ -8,11 +8,11 @@ import (
 )
 
 func registerCustomRules() {
-	_ = validate.RegisterValidation("maxbytes", validateMaxBytes)
-	_ = validate.RegisterValidation("shortcode", validateShortCode)
+	_ = validate.RegisterValidation("max_bytes", validateMaxBytes)
+	_ = validate.RegisterValidation("short_code", validateShortCode)
 
-	registerTranslation("maxbytes", "{0} is too long")
-	registerTranslation("shortcode", "{0} must contain only letters and numbers")
+	registerTranslation("max_bytes", "{0} is too long")
+	registerTranslation("short_code", "{0} must contain only letters and numbers")
 }
 
 // validateMaxBytes checks byte length (not rune length).

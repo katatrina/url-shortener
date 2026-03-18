@@ -6,8 +6,8 @@ import (
 )
 
 // NormalizeStrings applies normalization rules to string and *string fields.
-// Supported rules: trim, lower, upper, singlespace.
-// Currently it does not support nested struct.
+// Supported rules: trim, lower, upper, and single space.
+// Currently, it does not support nested struct.
 func NormalizeStrings(s interface{}) {
 	v := reflect.ValueOf(s)
 	if v.Kind() == reflect.Ptr {
@@ -48,7 +48,7 @@ func NormalizeStrings(s interface{}) {
 				str = strings.ToLower(str)
 			case "upper":
 				str = strings.ToUpper(str)
-			case "singlespace":
+			case "single_space":
 				str = strings.Join(strings.Fields(str), " ")
 			}
 		}
@@ -61,4 +61,3 @@ func NormalizeStrings(s interface{}) {
 		}
 	}
 }
-

@@ -24,7 +24,6 @@ const (
 	FieldCodeInvalidFormat FieldErrorCode = "INVALID_FORMAT"
 	FieldCodeMinValue      FieldErrorCode = "MIN_VALUE"
 	FieldCodeMaxValue      FieldErrorCode = "MAX_VALUE"
-	FieldCodeTooLong       FieldErrorCode = "TOO_LONG"
 )
 
 // FieldError represents a validation error for a specific field.
@@ -81,8 +80,7 @@ func mapValidationTag(tag string) FieldErrorCode {
 		return FieldCodeMinValue
 	case "max", "lte":
 		return FieldCodeMaxValue
-	case "maxbytes":
-		return FieldCodeTooLong
+
 	default:
 		return FieldErrorCode(strings.ToUpper(tag))
 	}
@@ -96,7 +94,7 @@ func toCamelCase(s string) string {
 		return ""
 	}
 
-	// Convert first character to lowercase
+	// Convert the first character to the lowercase
 	runes := []rune(s)
 	runes[0] = unicode.ToLower(runes[0])
 
