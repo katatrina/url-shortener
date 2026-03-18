@@ -5,8 +5,8 @@ import "github.com/katatrina/url-shortener/internal/model"
 // -- Requests --
 
 type ShortenURLRequest struct {
-	OriginalURL string  `json:"originalUrl" validate:"required,url"`
-	CustomAlias *string `json:"customAlias"`
+	OriginalURL string `json:"originalUrl" validate:"required,http_url,max=2048" normalize:"trim"`
+	CustomAlias string `json:"customAlias" validate:"omitempty,shortcode,min=3,max=30" normalize:"trim"`
 }
 
 type RegisterRequest struct {
@@ -16,7 +16,7 @@ type RegisterRequest struct {
 }
 
 type LoginRequest struct {
-	Email    string `json:"email" validate:"required,email" normalize:"trim,lower"`
+	Email    string `json:"email" validate:"required,email,max=255" normalize:"trim,lower"`
 	Password string `json:"password" validate:"required"`
 }
 

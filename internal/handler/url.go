@@ -23,17 +23,9 @@ func (h *Handler) ShortenURL(c *gin.Context) {
 		UserID:      middleware.GetAuthUserID(c),
 	}
 
-	if req.CustomAlias != nil {
-		arg.CustomAlias = *req.CustomAlias
-	}
-
 	url, err := h.service.ShortenURL(c.Request.Context(), arg)
 	if err != nil {
 		switch {
-		case errors.Is(err, model.ErrInvalidURL):
-			response.BadRequest(c, response.CodeInvalidURL, "Invalid URL format")
-		case errors.Is(err, model.ErrInvalidShortCode):
-			response.BadRequest(c, response.CodeInvalidShortCode, "Custom alias contains invalid characters (only a-z, A-Z, 0-9)")
 		case errors.Is(err, model.ErrShortCodeTaken):
 			response.Conflict(c, response.CodeShortCodeTaken, "Custom alias is already taken")
 		default:

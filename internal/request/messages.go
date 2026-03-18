@@ -1,7 +1,6 @@
 package request
 
 import (
-
 	"strings"
 
 	ut "github.com/go-playground/universal-translator"
@@ -17,6 +16,8 @@ func registerCustomMessages() {
 		"max":           "{0} must be at most {1} characters",
 		"gte":           "{0} must be at least {1}",
 		"lte":           "{0} must be at most {1}",
+		"http_url":      "{0} must be a valid HTTP or HTTPS URL",
+		"alphanum":      "{0} must contain only letters and numbers",
 	}
 
 	for tag, msg := range messages {

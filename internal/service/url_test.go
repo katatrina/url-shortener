@@ -79,22 +79,6 @@ func TestShortenURL_CustomAlias_Success(t *testing.T) {
 	}
 }
 
-func TestShortenURL_InvalidCustomAlias(t *testing.T) {
-	ctrl := gomock.NewController(t)
-
-	mockURLRepo := mock.NewMockURLRepository(ctrl)
-	svc := New(mockURLRepo, nil, nil)
-
-	_, err := svc.ShortenURL(context.Background(), model.ShortenURLParams{
-		OriginalURL: "https://example.com",
-		CustomAlias: "invalid-alias!", // Contains invalid characters.
-	})
-
-	if !errors.Is(err, model.ErrInvalidShortCode) {
-		t.Errorf("expected ErrInvalidShortCode, got %v", err)
-	}
-}
-
 func TestShortenURL_CustomAliasTaken(t *testing.T) {
 	ctrl := gomock.NewController(t)
 

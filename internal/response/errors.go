@@ -8,11 +8,9 @@ const (
 	CodeValidationFailed  ErrorCode = "VALIDATION_FAILED"
 	CodeJSONFormatInvalid ErrorCode = "INVALID_JSON_FORMAT"
 
-	CodeURLNotFound      ErrorCode = "URL_NOT_FOUND"
-	CodeURLExpired       ErrorCode = "URL_EXPIRED"
-	CodeShortCodeTaken   ErrorCode = "SHORT_CODE_TAKEN"
-	CodeInvalidShortCode ErrorCode = "INVALID_SHORT_CODE"
-	CodeInvalidURL       ErrorCode = "INVALID_URL"
+	CodeURLNotFound    ErrorCode = "URL_NOT_FOUND"
+	CodeURLExpired     ErrorCode = "URL_EXPIRED"
+	CodeShortCodeTaken ErrorCode = "SHORT_CODE_TAKEN"
 
 	CodeAuthRequired       ErrorCode = "AUTHENTICATION_REQUIRED"
 	CodeCredentialsInvalid ErrorCode = "INVALID_CREDENTIALS"

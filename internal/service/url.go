@@ -19,10 +19,6 @@ func (s *Service) ShortenURL(ctx context.Context, params model.ShortenURLParams)
 	var code string
 
 	if params.CustomAlias != "" { // User wants a custom short code.
-		if !shortcode.IsValid(params.CustomAlias) {
-			return nil, model.ErrInvalidShortCode
-		}
-
 		exists, err := s.urlRepo.ShortCodeExists(ctx, params.CustomAlias)
 		if err != nil {
 			return nil, err
