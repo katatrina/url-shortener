@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis_rate/v10"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/katatrina/url-shortener/internal/cache"
 	"github.com/katatrina/url-shortener/internal/config"
@@ -64,6 +65,8 @@ func main() {
 	svc := service.New(urlRepo, userRepo, urlCache, tokenMaker)
 	h := handler.New(svc, cfg.BaseURL)
 
+	rateLimiter := redis_rate.NewLimiter(rdb)
+
 	router := gin.Default()
 	router.NoRoute(func(c *gin.Context) {
 		response.NotFound(c, response.CodeRouteNotFound,
@@ -75,7 +78,11 @@ func main() {
 	v1 := router.Group("/api/v1")
 	{
 		// Public: shorten URL (works with or without auth)
-		v1.POST("/shorten", middleware.OptionalAuth(tokenMaker), h.ShortenURL)
+		v1.POST("/shorten",
+			middleware.RateLimit(rateLimiter, redis_rate.PerMinute(10)),
+			middleware.OptionalAuth(tokenMaker),
+			h.ShortenURL,
+		)
 
 		// Auth
 		v1.POST("/auth/register", h.Register)

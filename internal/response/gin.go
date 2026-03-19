@@ -55,6 +55,10 @@ func InternalServerError(c *gin.Context) {
 	)
 }
 
+func TooManyRequests(c *gin.Context, message string) {
+	c.JSON(http.StatusTooManyRequests, New().Error(CodeTooManyRequests, message).Build())
+}
+
 // HandleJSONBindingError properly handles different types of request.ShouldBindJSON errors.
 // It distinguishes between JSON parsing errors and validation errors,
 // returning appropriate error codes and messages.
