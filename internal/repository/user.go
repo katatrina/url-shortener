@@ -43,7 +43,7 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*model.
 	`
 
 	rows, _ := r.db.Query(ctx, query, email)
-	user, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[model.User])
+	user, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[model.User])
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, model.ErrUserNotFound

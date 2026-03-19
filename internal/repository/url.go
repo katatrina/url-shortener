@@ -45,7 +45,7 @@ func (r *URLRepository) FindByShortCode(ctx context.Context, shortCode string) (
 	`
 
 	rows, _ := r.db.Query(ctx, query, shortCode)
-	url, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[model.URL])
+	url, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[model.URL])
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, model.ErrURLNotFound
