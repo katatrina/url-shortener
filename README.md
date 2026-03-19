@@ -172,6 +172,7 @@ Dependencies flow inward only. The service layer defines interfaces for its depe
 - **`crypto/rand` for short codes** — `math/rand` is predictable if you know the seed. `crypto/rand` reads from `/dev/urandom`, making codes unguessable.
 - **Soft delete** — URLs are marked as deleted (`deleted_at` timestamp) rather than removed, allowing recovery and maintaining referential integrity.
 - **Optional auth on shorten** — the `POST /shorten` endpoint uses optional auth middleware. No token = anonymous URL. Valid token = URL linked to account. Invalid token = 401 rejection.
+- **Short code for lookup, ID for writes** — API routes use `short_code` (public identifier) to find URLs. Once the record is loaded, all write operations (update, delete, increment) use the internal `id` (primary key). This decouples the public identity from internal operations.
 
 ## Running Tests
 
