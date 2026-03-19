@@ -11,6 +11,7 @@ type Config struct {
 	ServerPort  string        `mapstructure:"SERVER_PORT"`
 	BaseURL     string        `mapstructure:"BASE_URL"`
 	DatabaseURL string        `mapstructure:"DATABASE_URL"`
+	RedisURL    string        `mapstructure:"REDIS_URL"`
 	JWTSecret   string        `mapstructure:"JWT_SECRET"`
 	JWTExpiry   time.Duration `mapstructure:"JWT_EXPIRY"`
 }
@@ -27,6 +28,9 @@ func (c *Config) Validate() error {
 	}
 	if c.JWTSecret == "" {
 		return errors.New("JWT_SECRET is required")
+	}
+	if c.RedisURL == "" {
+		return errors.New("REDIS_URL is required")
 	}
 
 	return nil

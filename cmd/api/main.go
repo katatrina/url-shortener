@@ -15,6 +15,7 @@ import (
 	"github.com/katatrina/url-shortener/internal/response"
 	"github.com/katatrina/url-shortener/internal/service"
 	"github.com/katatrina/url-shortener/internal/token"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -36,6 +37,19 @@ func main() {
 		log.Fatalf("Failed to ping database: %v", err)
 	}
 	log.Println("Connected to database successfully")
+
+	// Redis
+	redisOpts, err := redis.ParseURL(cfg.RedisURL)
+	if err != nil {
+		log.Fatalf("Failed to parse Redis URL: %v", err)
+	}
+	rdb := redis.NewClient(redisOpts)
+	defer rdb.Close()
+
+	if err = rdb.Ping(ctx).Err(); err != nil {
+		log.Fatalf("Failed to ping Redis: %v", err)
+	}
+	log.Println("Connected to Redis successfully")
 
 	tokenMaker, err := token.NewJWTMaker([]byte(cfg.JWTSecret), cfg.JWTExpiry)
 	if err != nil {
