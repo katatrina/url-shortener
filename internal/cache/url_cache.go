@@ -20,7 +20,11 @@ const (
 type CachedURL struct {
 	ID          string `json:"id"`
 	OriginalURL string `json:"originalUrl"`
-	ExpiresAt   *int64 `json:"expiresAt,omitempty"` // Unix timestamp,  nil = no expiry
+
+	// Pointer (*int64): nil means "no expiry", distinguishing it from zero value.
+	// Unix timestamp: compact and timezone-safe compared to time.Time string.
+	// omitempty: when nil, the field is omitted from JSON entirely to save Redis memory.
+	ExpiresAt *int64 `json:"expiresAt,omitempty"`
 }
 
 type URLCache struct {
@@ -36,8 +40,8 @@ func urlKey(shortCode string) string {
 }
 
 // Set stores a URL in cache.
-func (c *URLCache) Set(ctx context.Context, shortCode string, cached *CachedURL) error {
-	data, err := json.Marshal(cached)
+func (c *URLCache) Set(ctx context.Context, shortCode string, cachedURL *CachedURL) error {
+	data, err := json.Marshal(cachedURL)
 	if err != nil {
 		return fmt.Errorf("cache marshal failed: %w", err)
 	}

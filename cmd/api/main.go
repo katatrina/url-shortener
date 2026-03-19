@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/katatrina/url-shortener/internal/cache"
 	"github.com/katatrina/url-shortener/internal/config"
 	"github.com/katatrina/url-shortener/internal/handler"
 	"github.com/katatrina/url-shortener/internal/middleware"
@@ -56,9 +57,11 @@ func main() {
 		log.Fatalf("Failed to create token maker: %v", err)
 	}
 
+	urlCache := cache.NewURLCache(rdb)
+
 	urlRepo := repository.NewURLRepository(db)
 	userRepo := repository.NewUserRepository(db)
-	svc := service.New(urlRepo, userRepo, tokenMaker)
+	svc := service.New(urlRepo, userRepo, urlCache, tokenMaker)
 	h := handler.New(svc, cfg.BaseURL)
 
 	router := gin.Default()

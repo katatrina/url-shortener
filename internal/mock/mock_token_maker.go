@@ -57,16 +57,16 @@ func (mr *MockTokenMakerMockRecorder) CreateToken(userID any) *gomock.Call {
 }
 
 // VerifyToken mocks base method.
-func (m *MockTokenMaker) VerifyToken(tokenString string) (string, error) {
+func (m *MockTokenMaker) VerifyToken(tokenStr string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VerifyToken", tokenString)
+	ret := m.ctrl.Call(m, "VerifyToken", tokenStr)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // VerifyToken indicates an expected call of VerifyToken.
-func (mr *MockTokenMakerMockRecorder) VerifyToken(tokenString any) *gomock.Call {
+func (mr *MockTokenMakerMockRecorder) VerifyToken(tokenStr any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyToken", reflect.TypeOf((*MockTokenMaker)(nil).VerifyToken), tokenString)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyToken", reflect.TypeOf((*MockTokenMaker)(nil).VerifyToken), tokenStr)
 }

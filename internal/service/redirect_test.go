@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -12,11 +13,10 @@ import (
 )
 
 func TestResolve_Success(t *testing.T) {
-	// Arrange
 	ctrl := gomock.NewController(t)
 
 	mockURLRepo := mock.NewMockURLRepository(ctrl)
-	svc := New(mockURLRepo, nil, nil)
+	svc := New(mockURLRepo, nil, nil, nil) // added nil for urlCache
 
 	storedURL := &model.URL{
 		ID:          "url-123",
@@ -28,31 +28,40 @@ func TestResolve_Success(t *testing.T) {
 		FindByShortCode(gomock.Any(), "aB3kX9m").
 		Return(storedURL, nil)
 
+	// IncrementClickCount now runs in a goroutine.
+	// Use WaitGroup to ensure the goroutine completes before test cleanup.
+	var wg sync.WaitGroup
+	wg.Add(1)
 	mockURLRepo.EXPECT().
 		IncrementClickCount(gomock.Any(), "url-123").
-		Return(nil)
+		DoAndReturn(func(ctx context.Context, id string) error {
+			defer wg.Done()
+			return nil
+		})
 
-	// Act
 	result, err := svc.Resolve(context.Background(), "aB3kX9m")
 
-	// Assert
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 	if result != "https://example.com/very-long-url" {
 		t.Errorf("expected original URL, got %s", result)
 	}
+
+	wg.Wait() // Wait for async click tracking to complete.
 }
 
 func TestResolve_URLNotFound(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockURLRepo := mock.NewMockURLRepository(ctrl)
-	svc := New(mockURLRepo, nil, nil)
+	svc := New(mockURLRepo, nil, nil, nil)
 
 	mockURLRepo.EXPECT().
 		FindByShortCode(gomock.Any(), "nonexist").
 		Return(nil, model.ErrURLNotFound)
+
+	// IncrementClickCount should NOT be called — URL doesn't exist.
 
 	_, err := svc.Resolve(context.Background(), "nonexist")
 
@@ -65,9 +74,9 @@ func TestResolve_URLExpired(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockURLRepo := mock.NewMockURLRepository(ctrl)
-	svc := New(mockURLRepo, nil, nil)
+	svc := New(mockURLRepo, nil, nil, nil)
 
-	expiredTime := time.Now().Add(-1 * time.Hour) // 1 hour ago
+	expiredTime := time.Now().Add(-1 * time.Hour)
 	storedURL := &model.URL{
 		ID:          "url-123",
 		ShortCode:   "expired1",
@@ -94,7 +103,7 @@ func TestResolve_ClickCountFailure_StillRedirects(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockURLRepo := mock.NewMockURLRepository(ctrl)
-	svc := New(mockURLRepo, nil, nil)
+	svc := New(mockURLRepo, nil, nil, nil)
 
 	storedURL := &model.URL{
 		ID:          "url-123",
@@ -106,11 +115,16 @@ func TestResolve_ClickCountFailure_StillRedirects(t *testing.T) {
 		FindByShortCode(gomock.Any(), "aB3kX9m").
 		Return(storedURL, nil)
 
+	var wg sync.WaitGroup
+	wg.Add(1)
 	mockURLRepo.EXPECT().
 		IncrementClickCount(gomock.Any(), "url-123").
-		Return(context.DeadlineExceeded) // DB timeout
+		DoAndReturn(func(ctx context.Context, id string) error {
+			defer wg.Done()
+			return context.DeadlineExceeded // DB timeout
+		})
 
-	// Act — should still succeed despite click tracking failure.
+	// Should still succeed despite click tracking failure.
 	result, err := svc.Resolve(context.Background(), "aB3kX9m")
 
 	if err != nil {
@@ -119,4 +133,6 @@ func TestResolve_ClickCountFailure_StillRedirects(t *testing.T) {
 	if result != "https://example.com" {
 		t.Errorf("expected original URL, got %s", result)
 	}
+
+	wg.Wait()
 }

@@ -18,7 +18,7 @@ func TestRegister_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockUserRepo := mock.NewMockUserRepository(ctrl)
-	svc := New(nil, mockUserRepo, nil)
+	svc := New(nil, mockUserRepo, nil, nil)
 
 	// We can't predict the exact user object (ID is random, password is hashed),
 	// so we use gomock.Any() and capture the argument to verify it.
@@ -61,7 +61,7 @@ func TestRegister_EmailAlreadyExists(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockUserRepo := mock.NewMockUserRepository(ctrl)
-	svc := New(nil, mockUserRepo, nil)
+	svc := New(nil, mockUserRepo, nil, nil)
 
 	mockUserRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any()).
@@ -85,7 +85,7 @@ func TestLogin_Success(t *testing.T) {
 
 	mockUserRepo := mock.NewMockUserRepository(ctrl)
 	mockTokenMaker := mock.NewMockTokenMaker(ctrl)
-	svc := New(nil, mockUserRepo, mockTokenMaker)
+	svc := New(nil, mockUserRepo, nil, mockTokenMaker)
 
 	// Pre-hash the password as it would be stored in DB.
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("correctpass"), bcrypt.DefaultCost)
@@ -127,7 +127,7 @@ func TestLogin_UserNotFound(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockUserRepo := mock.NewMockUserRepository(ctrl)
-	svc := New(nil, mockUserRepo, nil)
+	svc := New(nil, mockUserRepo, nil, nil)
 
 	mockUserRepo.EXPECT().
 		FindByEmail(gomock.Any(), "ghost@example.com").
@@ -151,7 +151,7 @@ func TestLogin_WrongPassword(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockUserRepo := mock.NewMockUserRepository(ctrl)
-	svc := New(nil, mockUserRepo, nil)
+	svc := New(nil, mockUserRepo, nil, nil)
 
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("correctpass"), bcrypt.DefaultCost)
 

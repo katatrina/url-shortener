@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -120,5 +121,17 @@ func (s *Service) DeleteUserURL(ctx context.Context, shortCode, userID string) e
 		return model.ErrURLOwnerMismatch
 	}
 
-	return s.urlRepo.Delete(ctx, u.ID)
+	if err = s.urlRepo.Delete(ctx, u.ID); err != nil {
+		return err
+	}
+
+	// Invalidate cache AFTER successful DB delete.
+	// If DB delete fails, we don't want to remove valid cache.
+	if s.urlCache != nil {
+		if err := s.urlCache.Delete(ctx, shortCode); err != nil {
+			log.Printf("[WARN] cache delete failed for %s: %v", shortCode, err)
+		}
+	}
+
+	return nil
 }
