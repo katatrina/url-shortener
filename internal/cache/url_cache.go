@@ -57,12 +57,21 @@ func (c *URLCache) Get(ctx context.Context, shortCode string) (*CachedURL, error
 		if errors.Is(err, redis.Nil) {
 			return nil, nil // Cache miss - not an error.
 		}
-		return nil, fmt.Errorf("cache get failed: %w", err)
+		return nil, fmt.Errorf("cache get failed: %w", err) // Infrastructure error (Redis down, timeout, network)
 	}
 
 	var cached CachedURL
 	if err = json.Unmarshal(data, &cached); err != nil {
-		// Corrupted cache entry - delete it and treat as miss.
+		// Cache data is corrupted (e.g., schema change after deployment, manual edit via redis-cli, bug elsewhere marshal wrong data format).
+		//
+		// Strategy: self-healing cache
+		// 1. Delete the bad entry so the next request gets a clean cache miss
+		//    instead of repeatedly hitting unmarshal failure until TTL expires.
+		// 2. Return nil, nil (treat as cache miss) so the caller falls through
+		//    to the database. Cache is not the source of truth - a corrupted entry
+		//    should never surface as an error to the user.
+		// 3. Del error is intentionally discarded (best-effort cleanup).
+		//    If Del also fails, TTL will eventually evict the bad entry anyway.
 		_ = c.rdb.Del(ctx, urlKey(shortCode)).Err()
 		return nil, nil
 	}
@@ -70,8 +79,14 @@ func (c *URLCache) Get(ctx context.Context, shortCode string) (*CachedURL, error
 	return &cached, nil
 }
 
-// Delete removes a URL from cache.
-// Used when a URL is deleted or updated.
+// Delete removes a URL from cache by short code.
+//
+// Note:
+//  - Deleting (DEL) a non-existent key in Redis will not return any error - it returns 0 (no keys were deleted).
+//  - Cache invalidation is an idempotent operation - calling it once or ten times should return the same result: the key disappears.
+//  - We don't care whether it "existed and was deleted" or "never existed in the first place".
+//  - There are many reasons why a key might not exist in the cache at the time you call Del: the TTL has expired, the cache was evicted due to memory shortage, Redis just restarted, or simply the key was never cached. All of these are normal occurrences, not errors, and do not require special handling.
+//  - Non-nil errors here are infrastructure-level only (network, timeout, etc.).
 func (c *URLCache) Delete(ctx context.Context, shortCode string) error {
 	return c.rdb.Del(ctx, urlKey(shortCode)).Err()
 }

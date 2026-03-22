@@ -12,22 +12,25 @@ import (
 
 func RateLimit(limiter *redis_rate.Limiter, limit redis_rate.Limit) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		key := fmt.Sprintf("rl:%s", c.ClientIP())
+		// Lib redis_rate always adds a fixed prefix "rate" to every key.
+		key := fmt.Sprintf("%s:%s", "shorten", c.ClientIP())
 
-		result, err := limiter.Allow(c.Request.Context(), key, limit)
+		result, err := limiter.Allow(c.Request.Context(), key, limit) // Allow handles entire rate limiting logic
 		if err != nil {
-			// Redis down — let the request through.
+			// Redis down — let the request through (Fail open).
+			// Else, Fail closed = block.
 			log.Printf("[WARN] rate limit check failed: %v", err)
 			c.Next()
 			return
 		}
 
-		// Set standard rate limit headers.
-		c.Header("X-RateLimit-Limit", strconv.Itoa(limit.Rate))
-		c.Header("X-RateLimit-Remaining", strconv.Itoa(max(0, result.Remaining)))
-		c.Header("Retry-After", strconv.Itoa(int(result.RetryAfter.Seconds())))
+		// Set custom rate limit headers so clients can self-throttle.
+		c.Header("RateLimit-Limit", strconv.Itoa(limit.Rate))
+		c.Header("RateLimit-Remaining", strconv.Itoa(max(0, result.Remaining)))
+		c.Header("RateLimit-Reset", strconv.Itoa(int(result.ResetAfter.Seconds())))
 
 		if result.Allowed == 0 {
+			c.Header("Retry-After", strconv.Itoa(int(result.RetryAfter.Seconds())))
 			response.TooManyRequests(c, "Rate limit exceeded. Try again later")
 			c.Abort()
 			return

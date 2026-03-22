@@ -73,13 +73,15 @@ func main() {
 			"The requested endpoint does not exist")
 	})
 
+	// Root level API without any prefix, served for end users
 	router.GET("/:code", h.Redirect)
 
+	// Management APIs, served for dev/frontend
 	v1 := router.Group("/api/v1")
 	{
 		// Public: shorten URL (works with or without auth)
 		v1.POST("/shorten",
-			middleware.RateLimit(rateLimiter, redis_rate.PerMinute(10)),
+			middleware.RateLimit(rateLimiter, redis_rate.PerMinute(10)), // 10 requests per minute per IP.
 			middleware.OptionalAuth(tokenMaker),
 			h.ShortenURL,
 		)
