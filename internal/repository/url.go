@@ -36,7 +36,6 @@ func (r *URLRepository) Create(ctx context.Context, url model.URL) (*model.URL, 
 }
 
 // FindByShortCode looks up a URL by its short code.
-// This is the hottest query in the system — called on every redirect.
 func (r *URLRepository) FindByShortCode(ctx context.Context, shortCode string) (*model.URL, error) {
 	query := `
 		SELECT id, short_code, original_url, user_id, click_count, expires_at, created_at, updated_at, deleted_at
@@ -57,8 +56,6 @@ func (r *URLRepository) FindByShortCode(ctx context.Context, shortCode string) (
 }
 
 // IncrementClickCount atomically increments the click counter.
-// Now, called synchronously in redirect handler.
-// Later this will be replaced by an async analytics pipeline.
 func (r *URLRepository) IncrementClickCount(ctx context.Context, id string) error {
 	query := `
 		UPDATE urls
@@ -128,7 +125,6 @@ func (r *URLRepository) Delete(ctx context.Context, id string) error {
 }
 
 // ShortCodeExists checks if a short code is already in use.
-// Used to avoid collisions during code generation and to validate custom aliases.
 func (r *URLRepository) ShortCodeExists(ctx context.Context, shortCode string) (bool, error) {
 	query := `
 		SELECT EXISTS(SELECT 1 FROM urls WHERE short_code = $1 AND deleted_at IS NULL)

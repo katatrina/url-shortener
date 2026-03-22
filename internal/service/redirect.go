@@ -10,7 +10,6 @@ import (
 )
 
 // Resolve looks up a short code and returns the original URL for redirect.
-// It also increments the click counter synchronously.
 func (s *Service) Resolve(ctx context.Context, shortCode string) (string, error) {
 	// Step 1: Try cache first
 	if s.urlCache != nil {
@@ -54,12 +53,14 @@ func (s *Service) Resolve(ctx context.Context, shortCode string) (string, error)
 			cachedURL.ExpiresAt = &ts
 		}
 
+		// Sync is fine here: cache write is sub-ms, not worth a goroutine.
 		if err := s.urlCache.Set(ctx, shortCode, cachedURL); err != nil {
 			// Cache write failure - log but don't fail the request.
 			log.Printf("[WARN] cache set failed for %s: %v", shortCode, err)
 		}
 	}
 
+	// Async: DB write is slow; don't make the user wait for analytics.
 	go s.trackClick(context.WithoutCancel(ctx), u.ID, shortCode)
 
 	return u.OriginalURL, nil

@@ -10,17 +10,21 @@ A URL shortening service that converts long URLs into short, shareable links and
 - **Click tracking** — every redirect is counted
 - **Link expiry** — URLs can have an optional expiration date
 - **Soft delete** — deleted URLs are recoverable
+- **Redis caching** — hot URLs are cached for fast redirect
+- **Rate limiting** — per-IP throttling on the shorten endpoint (10 req/min)
 
 ## Tech Stack
 
-| Component      | Technology          |
-|----------------|---------------------|
-| Language        | Go 1.25             |
-| HTTP Framework  | Gin                 |
-| Database        | PostgreSQL 16 (pgx) |
-| Auth            | JWT (HS256)         |
-| Config          | Viper               |
-| Infrastructure  | Docker Compose      |
+| Component      | Technology              |
+|----------------|-------------------------|
+| Language        | Go 1.25                 |
+| HTTP Framework  | Gin                     |
+| Database        | PostgreSQL 16 (pgx)     |
+| Cache           | Redis 7 (go-redis)      |
+| Rate Limiting   | redis_rate              |
+| Auth            | JWT (HS256)             |
+| Config          | Viper                   |
+| Infrastructure  | Docker Compose          |
 
 ## Project Structure
 
@@ -28,16 +32,18 @@ A URL shortening service that converts long URLs into short, shareable links and
 url-shortener/
 ├── cmd/api/main.go            # Application entrypoint
 ├── internal/
+│   ├── cache/                 # Redis cache layer for URL lookups
 │   ├── config/                # Environment config loading
 │   ├── handler/               # HTTP handlers (request/response)
-│   ├── middleware/             # Auth middleware (strict + optional)
-│   ├── service/               # Business logic
-│   ├── repository/            # Database queries
+│   ├── middleware/             # Auth + rate limiting middleware
+│   ├── mock/                  # Generated mocks (gomock)
 │   ├── model/                 # Domain models and errors
-│   ├── token/                 # JWT creation and verification
+│   ├── repository/            # Database queries
 │   ├── request/               # Validation, normalization, pagination
 │   ├── response/              # Standardized API response format
-│   └── shortcode/             # Short code generation (crypto/rand + base62)
+│   ├── service/               # Business logic
+│   ├── shortcode/             # Short code generation (crypto/rand + base62)
+│   └── token/                 # JWT creation and verification
 ├── migrations/                # PostgreSQL migrations
 ├── docker-compose.yml
 ├── Makefile
@@ -110,12 +116,12 @@ The server starts on `http://localhost:8080` by default.
 
 ```bash
 # Anonymous
-curl -X POST http://localhost:8083/api/v1/shorten \
+curl -X POST http://localhost:8080/api/v1/shorten \
   -H "Content-Type: application/json" \
   -d '{"originalUrl": "https://github.com/katatrina/url-shortener"}'
 
 # With custom alias (authenticated)
-curl -X POST http://localhost:8083/api/v1/shorten \
+curl -X POST http://localhost:8080/api/v1/shorten \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <token>" \
   -d '{"originalUrl": "https://github.com/katatrina/url-shortener", "customAlias": "myrepo"}'
@@ -125,12 +131,12 @@ curl -X POST http://localhost:8083/api/v1/shorten \
 
 ```bash
 # Register
-curl -X POST http://localhost:8083/api/v1/auth/register \
+curl -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email": "alice@example.com", "displayName": "Alice", "password": "securepass123"}'
 
 # Login
-curl -X POST http://localhost:8083/api/v1/auth/login \
+curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email": "alice@example.com", "password": "securepass123"}'
 ```
@@ -200,8 +206,9 @@ go generate ./internal/mock/...
 
 | Variable       | Description                        | Example                                              |
 |----------------|------------------------------------|------------------------------------------------------|
-| `SERVER_PORT`  | Port the server listens on         | `8083`                                               |
+| `SERVER_PORT`  | Port the server listens on         | `8080`                                               |
 | `DATABASE_URL` | PostgreSQL connection string       | `postgres://root:secret@localhost:5432/url_shortener` |
+| `REDIS_URL`    | Redis connection string            | `redis://localhost:6379/0`                            |
 | `BASE_URL`     | Public base URL for short links    | `http://localhost:8080`                               |
 | `JWT_SECRET`   | Secret key for signing JWT (≥32B)  | `PgK13YiT0Upo...`                                   |
 | `JWT_EXPIRY`   | Token expiration duration          | `24h`                                                |
@@ -209,7 +216,7 @@ go generate ./internal/mock/...
 ## Roadmap
 
 - [x] **Phase 1** — Core MVP: shorten, redirect, auth, CRUD, unit tests
-- [ ] **Phase 2** — Redis caching + rate limiting
+- [x] **Phase 2** — Redis caching + rate limiting
 - [ ] **Phase 3** — Async analytics pipeline (goroutines + channels)
 - [ ] **Phase 4** — Observability + CI/CD (Prometheus, Grafana, GitHub Actions)
 - [ ] **Phase 5** — Microservices migration
