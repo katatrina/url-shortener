@@ -18,17 +18,17 @@ func (s *Service) Resolve(ctx context.Context, shortCode string) (string, error)
 			// Cache error (not cache MISS) - log and fall through DB.
 			// Never let cache failure break the redirect flow.
 			log.Printf("[WARN] cache get failed for %s: %v", shortCode, err)
-		}
+		} else {
+			if cachedURL != nil {
+				// Cache HIT - check expiry and return.
+				if cachedURL.ExpiresAt != nil && time.Now().Unix() > *cachedURL.ExpiresAt {
+					return "", model.ErrURLExpired
+				}
 
-		if cachedURL != nil {
-			// Cache HIT - check expiry and return.
-			if cachedURL.ExpiresAt != nil && time.Now().Unix() > *cachedURL.ExpiresAt {
-				return "", model.ErrURLExpired
+				go s.trackClick(context.WithoutCancel(ctx), cachedURL.ID, shortCode)
+
+				return cachedURL.OriginalURL, nil
 			}
-
-			go s.trackClick(context.WithoutCancel(ctx), cachedURL.ID, shortCode)
-
-			return cachedURL.OriginalURL, nil
 		}
 	}
 
@@ -60,14 +60,14 @@ func (s *Service) Resolve(ctx context.Context, shortCode string) (string, error)
 		}
 	}
 
-	// Async: DB write is slow; don't make the user wait for analytics.
+	// Step 4: Try to increment click counter asynchronously (best effort).
 	go s.trackClick(context.WithoutCancel(ctx), u.ID, shortCode)
 
 	return u.OriginalURL, nil
 }
 
-// trackClick increments click count in the background.
-// This is fire-and-forget -- click tracking failure should never block redirect.
+// trackClick increments click count for a url.
+// If error, it just logs it.
 func (s *Service) trackClick(ctx context.Context, urlID, shortCode string) {
 	if err := s.urlRepo.IncrementClickCount(ctx, urlID); err != nil {
 		log.Printf("[WARN] failed to increment click count for %s: %v", shortCode, err)

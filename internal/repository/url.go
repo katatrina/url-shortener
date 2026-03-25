@@ -55,7 +55,7 @@ func (r *URLRepository) FindByShortCode(ctx context.Context, shortCode string) (
 	return &url, nil
 }
 
-// IncrementClickCount atomically increments the click counter.
+// IncrementClickCount atomically increments the click counter (no race condition).
 func (r *URLRepository) IncrementClickCount(ctx context.Context, id string) error {
 	query := `
 		UPDATE urls

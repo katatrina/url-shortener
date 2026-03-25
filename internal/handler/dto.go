@@ -27,7 +27,7 @@ type URLResponse struct {
 	ShortURL    string `json:"shortUrl"`
 	OriginalURL string `json:"originalUrl"`
 	ClickCount  int64  `json:"clickCount"`
-	ExpiresAt   *int64 `json:"expiresAt,omitempty"`
+	ExpiresAt   *int64 `json:"expiresAt"`
 	CreatedAt   int64  `json:"createdAt"`
 }
 

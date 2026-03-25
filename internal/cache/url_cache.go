@@ -46,6 +46,7 @@ func (c *URLCache) Set(ctx context.Context, shortCode string, cachedURL *CachedU
 		return fmt.Errorf("cache marshal failed: %w", err)
 	}
 
+	// infrastructure-level-only error (Redis down, network, timeout, context cancel, OOM).
 	return c.rdb.Set(ctx, urlKey(shortCode), data, urlCacheTTL).Err()
 }
 
@@ -67,19 +68,16 @@ func (c *URLCache) Get(ctx context.Context, shortCode string) (*CachedURL, error
 		// Strategy: self-healing cache
 		// 1. Delete the bad entry so the next request gets a clean cache miss
 		//    instead of repeatedly hitting unmarshal failure until TTL expires.
-		// 2. Return nil, nil (treat as cache miss) so the caller falls through
-		//    to the database. Cache is not the source of truth - a corrupted entry
-		//    should never surface as an error to the user.
-		// 3. Del error is intentionally discarded (best-effort cleanup).
+		// 2. Del error is intentionally ignored (best-effort cleanup).
 		//    If Del also fails, TTL will eventually evict the bad entry anyway.
 		_ = c.rdb.Del(ctx, urlKey(shortCode)).Err()
-		return nil, nil
+		return nil, fmt.Errorf("failed to parse cache data: %w", err)
 	}
 
 	return &cached, nil
 }
 
-// Delete removes a URL from cache by short code.
+// Delete removes a cache entry by short code.
 //
 // Note:
 //  - Deleting (DEL) a non-existent key in Redis will not return any error - it returns 0 (no keys were deleted).

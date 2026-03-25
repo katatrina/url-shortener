@@ -15,7 +15,9 @@ func RateLimit(limiter *redis_rate.Limiter, limit redis_rate.Limit) gin.HandlerF
 		// Lib redis_rate always adds a fixed prefix "rate" to every key.
 		key := fmt.Sprintf("%s:%s", "shorten", c.ClientIP())
 
-		result, err := limiter.Allow(c.Request.Context(), key, limit) // Allow handles entire rate limiting logic
+		// Allow runs a Lua script on Redis that atomically checks the limit,
+		// increments the counter, and sets TTL matching the window period.
+		result, err := limiter.Allow(c.Request.Context(), key, limit)
 		if err != nil {
 			// Redis down — let the request through (Fail open).
 			// Else, Fail closed = block.

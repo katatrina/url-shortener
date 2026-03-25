@@ -127,7 +127,7 @@ func (s *Service) DeleteUserURL(ctx context.Context, shortCode, userID string) e
 
 	// Invalidate cache AFTER successful DB delete.
 	// If DB delete fails, we don't want to remove a valid cache.
-	// Worst case: cache delete fails, stale data remains but will be auto-purged by TTL.
+	// Worst case: cache delete fails, stale cache remains but will be auto-purged by TTL.
 	if s.urlCache != nil {
 		if err := s.urlCache.Delete(ctx, shortCode); err != nil {
 			// Cache failure should not block a successful business operation.
