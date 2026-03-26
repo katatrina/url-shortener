@@ -12,6 +12,9 @@ A URL shortening service that converts long URLs into short, shareable links and
 - **Soft delete** — deleted URLs are recoverable
 - **Redis caching** — hot URLs are cached for fast redirect
 - **Rate limiting** — per-IP throttling on the shorten endpoint (10 req/min)
+- **Async analytics pipeline** — click events are collected via goroutines + channels, batched, and bulk-inserted
+- **Daily stats aggregation** — background aggregator computes per-URL daily click stats
+- **Analytics API** — view top referrers, countries, and daily click trends per URL
 
 ## Tech Stack
 
@@ -32,6 +35,7 @@ A URL shortening service that converts long URLs into short, shareable links and
 url-shortener/
 ├── cmd/api/main.go            # Application entrypoint
 ├── internal/
+│   ├── analytics/             # Async click collector + daily stats aggregator
 │   ├── cache/                 # Redis cache layer for URL lookups
 │   ├── config/                # Environment config loading
 │   ├── handler/               # HTTP handlers (request/response)
@@ -106,11 +110,12 @@ The server starts on `http://localhost:8080` by default.
 
 ### Protected (require JWT)
 
-| Method | Path                     | Description                  |
-|--------|--------------------------|------------------------------|
-| GET    | `/api/v1/me/urls`        | List your URLs (paginated)   |
-| GET    | `/api/v1/me/urls/:code`  | Get URL details              |
-| DELETE | `/api/v1/me/urls/:code`  | Soft delete a URL            |
+| Method | Path                           | Description                  |
+|--------|--------------------------------|------------------------------|
+| GET    | `/api/v1/me/urls`              | List your URLs (paginated)   |
+| GET    | `/api/v1/me/urls/:code`        | Get URL details              |
+| GET    | `/api/v1/me/urls/:code/stats`  | Get click analytics & stats  |
+| DELETE | `/api/v1/me/urls/:code`        | Soft delete a URL            |
 
 ### Example: Shorten a URL
 
@@ -179,6 +184,8 @@ Dependencies flow inward only. The service layer defines interfaces for its depe
 - **Soft delete** — URLs are marked as deleted (`deleted_at` timestamp) rather than removed, allowing recovery and maintaining referential integrity.
 - **Optional auth on shorten** — the `POST /shorten` endpoint uses optional auth middleware. No token = anonymous URL. Valid token = URL linked to account. Invalid token = 401 rejection.
 - **Short code for lookup, ID for writes** — API routes use `short_code` (public identifier) to find URLs. Once the record is loaded, all write operations (update, delete, increment) use the internal `id` (primary key). This decouples the public identity from internal operations.
+- **Async analytics pipeline** — redirect handler pushes click events to a buffered channel (non-blocking, drop-on-full). A worker pool drains the channel, batches events, and bulk-inserts to the DB. This keeps redirect latency low while still capturing analytics.
+- **Two-phase aggregation** — raw click events are stored first, then a background aggregator periodically computes daily stats per URL. This separates the fast write path (events) from the query-optimized read path (pre-aggregated stats).
 
 ## Running Tests
 
@@ -217,7 +224,7 @@ go generate ./internal/mock/...
 
 - [x] **Phase 1** — Core MVP: shorten, redirect, auth, CRUD, unit tests
 - [x] **Phase 2** — Redis caching + rate limiting
-- [ ] **Phase 3** — Async analytics pipeline (goroutines + channels)
+- [x] **Phase 3** — Async analytics pipeline (goroutines + channels)
 - [ ] **Phase 4** — Observability + CI/CD (Prometheus, Grafana, GitHub Actions)
 - [ ] **Phase 5** — Microservices migration
 - [ ] **Phase 6** — Frontend + public deployment
