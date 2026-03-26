@@ -25,3 +25,9 @@ type LoginUserResult struct {
 	AccessTokenExpiresAt time.Time
 	User                 *User
 }
+
+type ClickMeta struct {
+	IP        string
+	UserAgent string
+	Referer   string
+}

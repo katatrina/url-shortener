@@ -15,7 +15,8 @@ func TestResolve_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockURLRepo := mock.NewMockURLRepository(ctrl)
-	svc := New(mockURLRepo, nil, nil, nil, nil, nil)
+	mockCollector := mock.NewMockClickCollector(ctrl)
+	svc := New(mockURLRepo, nil, nil, nil, nil, nil, mockCollector)
 
 	storedURL := &model.URL{
 		ID:          "url-123",
@@ -27,7 +28,14 @@ func TestResolve_Success(t *testing.T) {
 		FindByShortCode(gomock.Any(), "aB3kX9m").
 		Return(storedURL, nil)
 
-	originalURL, urlID, err := svc.Resolve(context.Background(), "aB3kX9m")
+	mockCollector.EXPECT().
+		Track(gomock.Any()) // Verify tracking was called
+
+	originalURL, err := svc.Resolve(context.Background(), "aB3kX9m", model.ClickMeta{
+		IP:        "192.168.1.1",
+		UserAgent: "Mozilla/5.0",
+		Referer:   "https://google.com",
+	})
 
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -35,22 +43,19 @@ func TestResolve_Success(t *testing.T) {
 	if originalURL != "https://example.com/very-long-url" {
 		t.Errorf("expected original URL, got %s", originalURL)
 	}
-	if urlID != "url-123" {
-		t.Errorf("expected url ID url-123, got %s", urlID)
-	}
 }
 
 func TestResolve_URLNotFound(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockURLRepo := mock.NewMockURLRepository(ctrl)
-	svc := New(mockURLRepo, nil, nil, nil, nil, nil)
+	svc := New(mockURLRepo, nil, nil, nil, nil, nil, nil) // nil collector — won't be called
 
 	mockURLRepo.EXPECT().
 		FindByShortCode(gomock.Any(), "nonexist").
 		Return(nil, model.ErrURLNotFound)
 
-	_, _, err := svc.Resolve(context.Background(), "nonexist")
+	_, err := svc.Resolve(context.Background(), "nonexist", model.ClickMeta{})
 
 	if !errors.Is(err, model.ErrURLNotFound) {
 		t.Errorf("expected ErrURLNotFound, got %v", err)
@@ -61,7 +66,7 @@ func TestResolve_URLExpired(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockURLRepo := mock.NewMockURLRepository(ctrl)
-	svc := New(mockURLRepo, nil, nil, nil, nil, nil)
+	svc := New(mockURLRepo, nil, nil, nil, nil, nil, nil)
 
 	expiredTime := time.Now().Add(-1 * time.Hour)
 	storedURL := &model.URL{
@@ -75,7 +80,9 @@ func TestResolve_URLExpired(t *testing.T) {
 		FindByShortCode(gomock.Any(), "expired1").
 		Return(storedURL, nil)
 
-	_, _, err := svc.Resolve(context.Background(), "expired1")
+	// Collector should NOT be called for expired URLs.
+
+	_, err := svc.Resolve(context.Background(), "expired1", model.ClickMeta{})
 
 	if !errors.Is(err, model.ErrURLExpired) {
 		t.Errorf("expected ErrURLExpired, got %v", err)

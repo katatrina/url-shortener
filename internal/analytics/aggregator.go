@@ -16,7 +16,7 @@ type Aggregator struct {
 	repo     URLStatsRepository
 	interval time.Duration
 	wg       sync.WaitGroup
-	doneCh   chan struct{}
+	done     chan struct{}
 }
 
 // NewAggregator creates a new aggregation scheduler.
@@ -29,7 +29,7 @@ func NewAggregator(repo URLStatsRepository, interval time.Duration) *Aggregator 
 	return &Aggregator{
 		repo:     repo,
 		interval: interval,
-		doneCh:   make(chan struct{}),
+		done:     make(chan struct{}),
 	}
 }
 
@@ -43,7 +43,7 @@ func (a *Aggregator) Start() {
 // Stop signals the aggregation loop to stop and waits for it to finish.
 func (a *Aggregator) Stop() {
 	log.Println("[INFO] aggregator stopping...")
-	close(a.doneCh)
+	close(a.done)
 	a.wg.Wait()
 	log.Println("[INFO] aggregator stopped")
 }
@@ -62,7 +62,7 @@ func (a *Aggregator) run() {
 		select {
 		case <-ticker.C:
 			a.aggregate()
-		case <-a.doneCh:
+		case <-a.done:
 			// Run one final aggregation before shutting down.
 			// This ensures any events flushed by the collector during shutdown
 			// are captured in the daily stats.

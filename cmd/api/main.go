@@ -82,8 +82,6 @@ func main() {
 	clickEventRepo := repository.NewClickEventRepository(db)
 	statsRepo := repository.NewURLStatsRepository(db)
 
-	svc := service.New(urlRepo, userRepo, urlCache, clickEventRepo, statsRepo, tokenMaker)
-
 	// ---- Analytics Collector ----
 	collector := analytics.NewCollector(clickEventRepo, analytics.DefaultCollectorConfig())
 	collector.Start()
@@ -91,7 +89,8 @@ func main() {
 	aggregator := analytics.NewAggregator(statsRepo, 1*time.Minute) // 1 min for dev, 5-15 min for prod
 	aggregator.Start()
 
-	h := handler.New(svc, collector, cfg.BaseURL)
+	svc := service.New(urlRepo, userRepo, urlCache, clickEventRepo, statsRepo, tokenMaker, collector)
+	h := handler.New(svc, cfg.BaseURL)
 
 	// ---- Router ----
 	router := gin.Default()

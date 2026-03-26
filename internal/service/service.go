@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/katatrina/url-shortener/internal/analytics"
 	"github.com/katatrina/url-shortener/internal/cache"
 	"github.com/katatrina/url-shortener/internal/model"
 	"github.com/katatrina/url-shortener/internal/token"
@@ -44,6 +45,10 @@ type URLStatsQueryRepository interface {
 	GetDailyStats(ctx context.Context, urlID string, from, to time.Time) ([]model.DailyStat, error)
 }
 
+type ClickCollector interface {
+	Track(event analytics.ClickEvent)
+}
+
 type Service struct {
 	urlRepo        URLRepository
 	userRepo       UserRepository
@@ -51,6 +56,7 @@ type Service struct {
 	clickEventRepo ClickEventQueryRepository
 	statsRepo      URLStatsQueryRepository
 	tokenMaker     token.TokenMaker
+	collector      ClickCollector
 }
 
 func New(
@@ -60,6 +66,7 @@ func New(
 	clickEventRepo ClickEventQueryRepository,
 	statsRepo URLStatsQueryRepository,
 	tokenMaker token.TokenMaker,
+	collector ClickCollector,
 ) *Service {
 	return &Service{
 		urlRepo:        urlRepo,
@@ -68,5 +75,6 @@ func New(
 		clickEventRepo: clickEventRepo,
 		statsRepo:      statsRepo,
 		tokenMaker:     tokenMaker,
+		collector:      collector,
 	}
 }

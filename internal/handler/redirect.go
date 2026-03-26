@@ -4,10 +4,8 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/katatrina/url-shortener/internal/analytics"
 	"github.com/katatrina/url-shortener/internal/model"
 	"github.com/katatrina/url-shortener/internal/response"
 	"github.com/katatrina/url-shortener/internal/shortcode"
@@ -21,7 +19,11 @@ func (h *Handler) Redirect(c *gin.Context) {
 		return
 	}
 
-	originalURL, urlID, err := h.service.Resolve(c.Request.Context(), shortCode)
+	originalURL, err := h.service.Resolve(c.Request.Context(), shortCode, model.ClickMeta{
+		IP:        c.ClientIP(),
+		UserAgent: c.GetHeader("User-Agent"),
+		Referer:   c.GetHeader("Referer"),
+	})
 	if err != nil {
 		switch {
 		case errors.Is(err, model.ErrURLNotFound):
@@ -34,17 +36,6 @@ func (h *Handler) Redirect(c *gin.Context) {
 		}
 		return
 	}
-
-	// Push click event to analytics pipeline.
-	// This is non-blocking: if the channel is full, the event is dropped silently.
-	// The redirect response is never delayed by analytics.
-	h.collector.Track(analytics.ClickEvent{
-		URLID:     urlID,
-		IP:        c.ClientIP(),
-		UserAgent: c.GetHeader("User-Agent"),
-		Referer:   c.GetHeader("Referer"),
-		ClickedAt: time.Now(),
-	})
 
 	c.Redirect(http.StatusFound, originalURL)
 }
