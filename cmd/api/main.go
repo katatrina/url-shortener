@@ -40,9 +40,6 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
 	// ---- Database ----
 	dbCtx, dbCancel := context.WithTimeout(ctx, 10*time.Second)
 	defer dbCancel()
@@ -83,12 +80,16 @@ func main() {
 	urlRepo := repository.NewURLRepository(db)
 	userRepo := repository.NewUserRepository(db)
 	clickEventRepo := repository.NewClickEventRepository(db)
+	statsRepo := repository.NewURLStatsRepository(db)
 
-	svc := service.New(urlRepo, userRepo, urlCache, tokenMaker)
+	svc := service.New(urlRepo, userRepo, urlCache, clickEventRepo, statsRepo, tokenMaker)
 
 	// ---- Analytics Collector ----
 	collector := analytics.NewCollector(clickEventRepo, analytics.DefaultCollectorConfig())
 	collector.Start()
+
+	aggregator := analytics.NewAggregator(statsRepo, 1*time.Minute) // 1 min for dev, 5-15 min for prod
+	aggregator.Start()
 
 	h := handler.New(svc, collector, cfg.BaseURL)
 
@@ -117,6 +118,7 @@ func main() {
 		{
 			protected.GET("", h.ListUserURLs)
 			protected.GET("/:code", h.GetUserURL)
+			protected.GET("/:code/stats", h.GetURLStats)
 			protected.DELETE("/:code", h.DeleteUserURL)
 		}
 	}
@@ -168,7 +170,7 @@ func main() {
 	}
 	log.Println("HTTP server stopped")
 
-	// Step 2: Stop the analytics collector.
+	// Step 2: Stop the analytics collector first.
 	// This must happen AFTER the HTTP server stops, because:
 	// - HTTP server might still be handling in-flight requests
 	// - Those requests might push events to the collector
@@ -178,6 +180,10 @@ func main() {
 	// 1. Stop HTTP server (no more requests → no more events produced)
 	// 2. Stop collector (drain remaining events → flush final batch)
 	collector.Stop()
+
+	// Stop aggregator last — run final aggregation to capture
+	// any events the collector just flushed.
+	aggregator.Stop()
 
 	// Step 3: Close infrastructure connections.
 	// DB and Redis are closed by their deferred Close() calls.

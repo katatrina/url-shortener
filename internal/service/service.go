@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"time"
 
 	"github.com/katatrina/url-shortener/internal/cache"
 	"github.com/katatrina/url-shortener/internal/model"
@@ -22,31 +23,50 @@ type UserRepository interface {
 	FindByEmail(ctx context.Context, email string) (*model.User, error)
 }
 
-// URLCacheRepository defines what the service needs from cache.
-// The service doesn't know (or care) if this is Redis, Memcached, or a map.
 type URLCacheRepository interface {
 	Get(ctx context.Context, shortCode string) (*cache.CachedURL, error)
 	Set(ctx context.Context, shortCode string, cached *cache.CachedURL) error
 	Delete(ctx context.Context, shortCode string) error
 }
 
+// ClickEventQueryRepository defines read operations on click events.
+// This is separate from the collector's ClickEventRepository (which only writes)
+// because the readers and writers have different consumers:
+// - Write: analytics collector (internal, high-throughput)
+// - Read: analytics API (user-facing, query-optimized)
+type ClickEventQueryRepository interface {
+	GetTopReferrers(ctx context.Context, urlID string, limit int) ([]model.ReferrerStat, error)
+	GetTopCountries(ctx context.Context, urlID string, limit int) ([]model.CountryStat, error)
+}
+
+// URLStatsQueryRepository defines read operations on pre-aggregated stats.
+type URLStatsQueryRepository interface {
+	GetDailyStats(ctx context.Context, urlID string, from, to time.Time) ([]model.DailyStat, error)
+}
+
 type Service struct {
-	urlRepo    URLRepository
-	userRepo   UserRepository
-	urlCache   URLCacheRepository // nil = cache disabled
-	tokenMaker token.TokenMaker
+	urlRepo        URLRepository
+	userRepo       UserRepository
+	urlCache       URLCacheRepository
+	clickEventRepo ClickEventQueryRepository
+	statsRepo      URLStatsQueryRepository
+	tokenMaker     token.TokenMaker
 }
 
 func New(
 	urlRepo URLRepository,
 	userRepo UserRepository,
 	urlCache URLCacheRepository,
+	clickEventRepo ClickEventQueryRepository,
+	statsRepo URLStatsQueryRepository,
 	tokenMaker token.TokenMaker,
 ) *Service {
 	return &Service{
-		urlRepo,
-		userRepo,
-		urlCache,
-		tokenMaker,
+		urlRepo:        urlRepo,
+		userRepo:       userRepo,
+		urlCache:       urlCache,
+		clickEventRepo: clickEventRepo,
+		statsRepo:      statsRepo,
+		tokenMaker:     tokenMaker,
 	}
 }

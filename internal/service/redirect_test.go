@@ -15,7 +15,7 @@ func TestResolve_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockURLRepo := mock.NewMockURLRepository(ctrl)
-	svc := New(mockURLRepo, nil, nil, nil)
+	svc := New(mockURLRepo, nil, nil, nil, nil, nil)
 
 	storedURL := &model.URL{
 		ID:          "url-123",
@@ -44,7 +44,7 @@ func TestResolve_URLNotFound(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockURLRepo := mock.NewMockURLRepository(ctrl)
-	svc := New(mockURLRepo, nil, nil, nil)
+	svc := New(mockURLRepo, nil, nil, nil, nil, nil)
 
 	mockURLRepo.EXPECT().
 		FindByShortCode(gomock.Any(), "nonexist").
@@ -61,7 +61,7 @@ func TestResolve_URLExpired(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockURLRepo := mock.NewMockURLRepository(ctrl)
-	svc := New(mockURLRepo, nil, nil, nil)
+	svc := New(mockURLRepo, nil, nil, nil, nil, nil)
 
 	expiredTime := time.Now().Add(-1 * time.Hour)
 	storedURL := &model.URL{

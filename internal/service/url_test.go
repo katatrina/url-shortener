@@ -16,7 +16,7 @@ func TestShortenURL_RandomCode_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockURLRepo := mock.NewMockURLRepository(ctrl)
-	svc := New(mockURLRepo, nil, nil, nil)
+	svc := New(mockURLRepo, nil, nil, nil, nil, nil)
 
 	// The generated code is random, so we accept any string.
 	mockURLRepo.EXPECT().
@@ -51,7 +51,7 @@ func TestShortenURL_CustomAlias_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockURLRepo := mock.NewMockURLRepository(ctrl)
-	svc := New(mockURLRepo, nil, nil, nil)
+	svc := New(mockURLRepo, nil, nil, nil, nil, nil)
 
 	mockURLRepo.EXPECT().
 		ShortCodeExists(gomock.Any(), "myalias").
@@ -83,7 +83,7 @@ func TestShortenURL_CustomAliasTaken(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockURLRepo := mock.NewMockURLRepository(ctrl)
-	svc := New(mockURLRepo, nil, nil, nil)
+	svc := New(mockURLRepo, nil, nil, nil, nil, nil)
 
 	mockURLRepo.EXPECT().
 		ShortCodeExists(gomock.Any(), "taken").
@@ -105,7 +105,7 @@ func TestShortenURL_CollisionThenSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockURLRepo := mock.NewMockURLRepository(ctrl)
-	svc := New(mockURLRepo, nil, nil, nil)
+	svc := New(mockURLRepo, nil, nil, nil, nil, nil)
 
 	callCount := 0
 	mockURLRepo.EXPECT().
@@ -138,7 +138,7 @@ func TestShortenURL_WithAuthenticatedUser(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockURLRepo := mock.NewMockURLRepository(ctrl)
-	svc := New(mockURLRepo, nil, nil, nil)
+	svc := New(mockURLRepo, nil, nil, nil, nil, nil)
 
 	userID := "user-123"
 
@@ -173,7 +173,7 @@ func TestGetUserURL_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockURLRepo := mock.NewMockURLRepository(ctrl)
-	svc := New(mockURLRepo, nil, nil, nil)
+	svc := New(mockURLRepo, nil, nil, nil, nil, nil)
 
 	userID := "user-123"
 	storedURL := &model.URL{
@@ -201,7 +201,7 @@ func TestGetUserURL_NotFound(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockURLRepo := mock.NewMockURLRepository(ctrl)
-	svc := New(mockURLRepo, nil, nil, nil)
+	svc := New(mockURLRepo, nil, nil, nil, nil, nil)
 
 	mockURLRepo.EXPECT().
 		FindByShortCode(gomock.Any(), "nonexist").
@@ -219,7 +219,7 @@ func TestGetUserURL_OwnerMismatch(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockURLRepo := mock.NewMockURLRepository(ctrl)
-	svc := New(mockURLRepo, nil, nil, nil)
+	svc := New(mockURLRepo, nil, nil, nil, nil, nil)
 
 	ownerID := "user-999" // Owner is user-999.
 	storedURL := &model.URL{
@@ -245,7 +245,7 @@ func TestListUserURLs_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockURLRepo := mock.NewMockURLRepository(ctrl)
-	svc := New(mockURLRepo, nil, nil, nil)
+	svc := New(mockURLRepo, nil, nil, nil, nil, nil)
 
 	storedURLs := []model.URL{
 		{ID: "url-1", ShortCode: "code1", OriginalURL: "https://example.com/1"},
@@ -279,7 +279,7 @@ func TestDeleteUserURL_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockURLRepo := mock.NewMockURLRepository(ctrl)
-	svc := New(mockURLRepo, nil, nil, nil)
+	svc := New(mockURLRepo, nil, nil, nil, nil, nil)
 
 	userID := "user-123"
 	storedURL := &model.URL{
@@ -306,7 +306,7 @@ func TestDeleteUserURL_OwnerMismatch(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockURLRepo := mock.NewMockURLRepository(ctrl)
-	svc := New(mockURLRepo, nil, nil, nil)
+	svc := New(mockURLRepo, nil, nil, nil, nil, nil)
 
 	ownerID := "user-999"
 	storedURL := &model.URL{

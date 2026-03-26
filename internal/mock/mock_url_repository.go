@@ -100,20 +100,6 @@ func (mr *MockURLRepositoryMockRecorder) FindByShortCode(ctx, shortCode any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByShortCode", reflect.TypeOf((*MockURLRepository)(nil).FindByShortCode), ctx, shortCode)
 }
 
-// IncrementClickCount mocks base method.
-func (m *MockURLRepository) IncrementClickCount(ctx context.Context, id string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IncrementClickCount", ctx, id)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// IncrementClickCount indicates an expected call of IncrementClickCount.
-func (mr *MockURLRepositoryMockRecorder) IncrementClickCount(ctx, id any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IncrementClickCount", reflect.TypeOf((*MockURLRepository)(nil).IncrementClickCount), ctx, id)
-}
-
 // ListByUserID mocks base method.
 func (m *MockURLRepository) ListByUserID(ctx context.Context, userID string, limit, offset int) ([]model.URL, error) {
 	m.ctrl.T.Helper()
