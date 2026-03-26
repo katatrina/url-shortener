@@ -4,8 +4,10 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/katatrina/url-shortener/internal/analytics"
 	"github.com/katatrina/url-shortener/internal/model"
 	"github.com/katatrina/url-shortener/internal/response"
 	"github.com/katatrina/url-shortener/internal/shortcode"
@@ -14,13 +16,12 @@ import (
 func (h *Handler) Redirect(c *gin.Context) {
 	shortCode := c.Param("code")
 
-	// Filter out junk requests early — no DB hit needed.
 	if !shortcode.IsValid(shortCode) {
 		response.NotFound(c, response.CodeURLNotFound, "Short URL not found")
 		return
 	}
 
-	originalURL, err := h.service.Resolve(c.Request.Context(), shortCode)
+	originalURL, urlID, err := h.service.Resolve(c.Request.Context(), shortCode)
 	if err != nil {
 		switch {
 		case errors.Is(err, model.ErrURLNotFound):
@@ -34,8 +35,16 @@ func (h *Handler) Redirect(c *gin.Context) {
 		return
 	}
 
-	// 302 Found: temporary redirect.
-	// Browser will always hit our server, so we can track every click.
-	// If we used 301 (permanent), the browser would cache and skip us.
+	// Push click event to analytics pipeline.
+	// This is non-blocking: if the channel is full, the event is dropped silently.
+	// The redirect response is never delayed by analytics.
+	h.collector.Track(analytics.ClickEvent{
+		URLID:     urlID,
+		IP:        c.ClientIP(),
+		UserAgent: c.GetHeader("User-Agent"),
+		Referer:   c.GetHeader("Referer"),
+		ClickedAt: time.Now(),
+	})
+
 	c.Redirect(http.StatusFound, originalURL)
 }

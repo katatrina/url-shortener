@@ -1,15 +1,20 @@
 package handler
 
-import "github.com/katatrina/url-shortener/internal/service"
+import (
+	"github.com/katatrina/url-shortener/internal/analytics"
+	"github.com/katatrina/url-shortener/internal/service"
+)
 
 type Handler struct {
-	service *service.Service
-	baseURL string
+	service   *service.Service
+	collector *analytics.Collector
+	baseURL   string
 }
 
-func New(service *service.Service, baseURL string) *Handler {
+func New(service *service.Service, collector *analytics.Collector, baseURL string) *Handler {
 	return &Handler{
-		service,
-		baseURL,
+		service:   service,
+		collector: collector,
+		baseURL:   baseURL,
 	}
 }

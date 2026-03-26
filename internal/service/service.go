@@ -11,7 +11,6 @@ import (
 type URLRepository interface {
 	Create(ctx context.Context, url model.URL) (*model.URL, error)
 	FindByShortCode(ctx context.Context, shortCode string) (*model.URL, error)
-	IncrementClickCount(ctx context.Context, id string) error
 	ListByUserID(ctx context.Context, userID string, limit, offset int) ([]model.URL, error)
 	CountByUserID(ctx context.Context, userID string) (int64, error)
 	Delete(ctx context.Context, id string) error
