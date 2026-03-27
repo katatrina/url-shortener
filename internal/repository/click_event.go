@@ -5,7 +5,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/katatrina/url-shortener/internal/analytics"
+	"github.com/katatrina/url-shortener/internal/model"
 )
 
 type ClickEventRepository struct {
@@ -25,7 +25,7 @@ func NewClickEventRepository(db *pgxpool.Pool) *ClickEventRepository {
 //   skipping SQL parsing entirely. For raw bulk inserts, COPY is the fastest.
 //
 // For context: pgx's CopyFrom maps to Postgres's "COPY ... FROM STDIN" command.
-func (r *ClickEventRepository) BulkInsert(ctx context.Context, events []analytics.ClickEvent) error {
+func (r *ClickEventRepository) BulkInsert(ctx context.Context, events []model.ClickEvent) error {
 	rows := make([][]any, len(events))
 
 	for i, e := range events {

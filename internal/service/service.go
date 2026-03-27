@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/katatrina/url-shortener/internal/analytics"
 	"github.com/katatrina/url-shortener/internal/cache"
 	"github.com/katatrina/url-shortener/internal/model"
 	"github.com/katatrina/url-shortener/internal/token"
@@ -30,23 +29,17 @@ type URLCacheRepository interface {
 	Delete(ctx context.Context, shortCode string) error
 }
 
-// ClickEventQueryRepository defines read operations on click events.
-// This is separate from the collector's ClickEventRepository (which only writes)
-// because the readers and writers have different consumers:
-// - Write: analytics collector (internal, high-throughput)
-// - Read: analytics API (user-facing, query-optimized)
 type ClickEventQueryRepository interface {
 	GetTopReferrers(ctx context.Context, urlID string, limit int) ([]model.ReferrerStat, error)
 	GetTopCountries(ctx context.Context, urlID string, limit int) ([]model.CountryStat, error)
 }
 
-// URLStatsQueryRepository defines read operations on pre-aggregated stats.
 type URLStatsQueryRepository interface {
 	GetDailyStats(ctx context.Context, urlID string, from, to time.Time) ([]model.DailyStat, error)
 }
 
 type ClickCollector interface {
-	Track(event analytics.ClickEvent)
+	Track(urlID string, meta model.ClickMeta)
 }
 
 type Service struct {
@@ -56,7 +49,7 @@ type Service struct {
 	clickEventRepo ClickEventQueryRepository
 	statsRepo      URLStatsQueryRepository
 	tokenMaker     token.TokenMaker
-	collector      ClickCollector
+	clickCollector ClickCollector
 }
 
 func New(
@@ -66,7 +59,7 @@ func New(
 	clickEventRepo ClickEventQueryRepository,
 	statsRepo URLStatsQueryRepository,
 	tokenMaker token.TokenMaker,
-	collector ClickCollector,
+	clickCollector ClickCollector,
 ) *Service {
 	return &Service{
 		urlRepo:        urlRepo,
@@ -75,6 +68,6 @@ func New(
 		clickEventRepo: clickEventRepo,
 		statsRepo:      statsRepo,
 		tokenMaker:     tokenMaker,
-		collector:      collector,
+		clickCollector: clickCollector,
 	}
 }

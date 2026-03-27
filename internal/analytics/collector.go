@@ -5,17 +5,18 @@ import (
 	"log"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/katatrina/url-shortener/internal/model"
 )
 
-// ClickEventRepository defines what the collector needs from the persistence layer.
-// Same pattern as service layer — depend on interface, not implementation.
-type ClickEventRepository interface {
-	BulkInsert(ctx context.Context, events []ClickEvent) error
+type ClickEventWriter interface {
+	BulkInsert(ctx context.Context, events []model.ClickEvent) error
 }
 
-// CollectorConfig holds tuning parameters for the analytics pipeline.
-// These are separated from Collector to make them configurable (e.g., from env vars).
-type CollectorConfig struct {
+// ClickCollectorConfig holds tuning parameters for the analytics pipeline.
+// These are separated from ClickCollector to make them configurable (e.g., from env vars).
+type ClickCollectorConfig struct {
 	WorkerCount   int           // Number of goroutines consuming events
 	ChannelBuffer int           // Max events queued before backpressure kicks in
 	BatchSize     int           // Flush to DB when this many events accumulate
@@ -24,8 +25,8 @@ type CollectorConfig struct {
 
 // DefaultCollectorConfig returns sensible defaults for development.
 // In production, these would be tuned based on traffic volume and DB capacity.
-func DefaultCollectorConfig() CollectorConfig {
-	return CollectorConfig{
+func DefaultCollectorConfig() ClickCollectorConfig {
+	return ClickCollectorConfig{
 		WorkerCount:   2,               // 2 workers is enough for moderate traffic
 		ChannelBuffer: 10000,           // Buffer up to 10k events before dropping
 		BatchSize:     100,             // Insert 100 rows per query
@@ -33,24 +34,24 @@ func DefaultCollectorConfig() CollectorConfig {
 	}
 }
 
-type Collector struct {
-	eventCh chan ClickEvent
-	repo    ClickEventRepository
-	cfg     CollectorConfig
-	wg      sync.WaitGroup
+type ClickCollector struct {
+	eventCh     chan model.ClickEvent
+	eventWriter ClickEventWriter
+	cfg         ClickCollectorConfig
+	wg          sync.WaitGroup
 }
 
-func NewCollector(repo ClickEventRepository, cfg CollectorConfig) *Collector {
-	return &Collector{
-		eventCh: make(chan ClickEvent, cfg.ChannelBuffer),
-		repo:    repo,
-		cfg:     cfg,
+func NewClickCollector(eventWriter ClickEventWriter, cfg ClickCollectorConfig) *ClickCollector {
+	return &ClickCollector{
+		eventCh:     make(chan model.ClickEvent, cfg.ChannelBuffer),
+		eventWriter: eventWriter,
+		cfg:         cfg,
 	}
 }
 
 // Start launches the worker pool. Call this once at application startup.
 // Each worker runs in its own goroutine, reading from the shared event channel.
-func (c *Collector) Start() {
+func (c *ClickCollector) Start() {
 	for i := range c.cfg.WorkerCount {
 		c.wg.Add(1)
 		go c.worker(i)
@@ -68,7 +69,7 @@ func (c *Collector) Start() {
 // 4. c.wg.Wait() blocks until every worker has exited
 //
 // After Stop returns, it's guaranteed that all events have been persisted.
-func (c *Collector) Stop() {
+func (c *ClickCollector) Stop() {
 	log.Println("[INFO] analytics collector stopping, draining remaining events...")
 	close(c.eventCh)
 	c.wg.Wait()
@@ -87,20 +88,34 @@ func (c *Collector) Stop() {
 // In practice, with a 10,000 buffer and workers draining continuously,
 // drops should be extremely rare. If you're seeing drops in logs,
 // it means you need more workers or a bigger buffer.
-func (c *Collector) Track(event ClickEvent) {
+func (c *ClickCollector) Track(urlID string, meta model.ClickMeta) {
+	id, _ := uuid.NewV7()
+	event := model.ClickEvent{
+		ID:        id.String(),
+		URLID:     urlID,
+		IP:        toNullable(meta.IP),
+		UserAgent: toNullable(meta.UserAgent),
+		Referer:   toNullable(meta.Referer),
+		ClickedAt: time.Now(),
+	}
+
 	select {
 	case c.eventCh <- event:
-		// Successfully queued.
 	default:
-		// Channel full — drop the event. This is backpressure in action.
-		log.Printf("[WARN] analytics channel full (buffer=%d), dropping event for url=%s",
-			c.cfg.ChannelBuffer, event.URLID)
+		log.Printf("[WARN] channel full, dropping event for url=%s", urlID)
 	}
+}
+
+func toNullable(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }
 
 // QueueDepth returns the number of events waiting to be processed.
 // Useful for metrics/monitoring (Phase 4: Prometheus gauge).
-func (c *Collector) QueueDepth() int {
+func (c *ClickCollector) QueueDepth() int {
 	return len(c.eventCh)
 }
 
@@ -114,10 +129,10 @@ func (c *Collector) QueueDepth() int {
 // in stream processing. Without the timer, low-traffic periods would cause
 // events to sit in memory indefinitely. Without the count threshold,
 // high-traffic periods would wait for the timer even when the batch is full.
-func (c *Collector) worker(id int) {
+func (c *ClickCollector) worker(id int) {
 	defer c.wg.Done()
 
-	batch := make([]ClickEvent, 0, c.cfg.BatchSize)
+	batch := make([]model.ClickEvent, 0, c.cfg.BatchSize)
 	ticker := time.NewTicker(c.cfg.FlushInterval)
 	defer ticker.Stop()
 
@@ -126,7 +141,7 @@ func (c *Collector) worker(id int) {
 			return
 		}
 
-		if err := c.repo.BulkInsert(context.Background(), batch); err != nil {
+		if err := c.eventWriter.BulkInsert(context.Background(), batch); err != nil {
 			// DB insert failed — log and discard the batch.
 			// In a production system, you might push failed events to a dead letter queue
 			// or retry with backoff. For now, logging is sufficient.

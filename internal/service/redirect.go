@@ -5,7 +5,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/katatrina/url-shortener/internal/analytics"
 	"github.com/katatrina/url-shortener/internal/cache"
 	"github.com/katatrina/url-shortener/internal/model"
 )
@@ -59,14 +58,9 @@ func (s *Service) Resolve(ctx context.Context, shortCode string, meta model.Clic
 }
 
 func (s *Service) trackClick(urlID string, meta model.ClickMeta) {
-	if s.collector == nil {
+	if s.clickCollector == nil {
 		return
 	}
 
-	s.collector.Track(analytics.NewClickEvent(
-		urlID,
-		meta.IP,
-		meta.UserAgent,
-		meta.Referer,
-	))
+	s.clickCollector.Track(urlID, meta)
 }

@@ -82,8 +82,8 @@ func main() {
 	clickEventRepo := repository.NewClickEventRepository(db)
 	statsRepo := repository.NewURLStatsRepository(db)
 
-	// ---- Analytics Collector ----
-	collector := analytics.NewCollector(clickEventRepo, analytics.DefaultCollectorConfig())
+	// ---- Analytics ClickCollector ----
+	collector := analytics.NewClickCollector(clickEventRepo, analytics.DefaultCollectorConfig())
 	collector.Start()
 
 	aggregator := analytics.NewAggregator(statsRepo, 1*time.Minute) // 1 min for dev, 5-15 min for prod

@@ -11,9 +11,3 @@ migrate-down-1:
 
 server:
 	go run ./cmd/api
-
-mockgen:
-	go generate ./internal/mock/...
-
-service-test:
-	go test ./internal/service/ -v
