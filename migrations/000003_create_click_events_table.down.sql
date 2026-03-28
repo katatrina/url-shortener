@@ -1,4 +1,4 @@
 BEGIN;
-DROP TABLE IF EXISTS url_stats_daily;
-DROP TABLE IF EXISTS click_events;
+DROP TABLE url_stats_daily;
+DROP TABLE click_events;
 COMMIT;

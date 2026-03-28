@@ -14,6 +14,11 @@ const (
 	MinTokenExpiry   = 5 * time.Minute
 )
 
+var (
+	ErrTokenExpired = errors.New("token has expired")
+	ErrTokenInvalid = errors.New("token is invalid")
+)
+
 type JWTMaker struct {
 	secretKey []byte
 	expiry    time.Duration

@@ -11,6 +11,10 @@ import (
 
 const AuthUserIDKey = "authUserID"
 
+type tokenVerifier interface {
+	VerifyToken(tokenStr string) (string, error)
+}
+
 func GetAuthUserID(c *gin.Context) *string {
 	val, exists := c.Get(AuthUserIDKey)
 	if !exists {
@@ -30,7 +34,7 @@ func MustGetAuthUserID(c *gin.Context) string {
 
 // Auth is a strict authentication middleware.
 // Requests without a valid token are rejected with 401.
-func Auth(tokenMaker token.TokenMaker) gin.HandlerFunc {
+func Auth(tv tokenVerifier) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -40,7 +44,7 @@ func Auth(tokenMaker token.TokenMaker) gin.HandlerFunc {
 			return
 		}
 
-		userID, err := extractAndVerifyToken(authHeader, tokenMaker)
+		userID, err := extractAndVerifyToken(authHeader, tv)
 		if err != nil {
 			handleTokenError(c, err)
 			c.Abort()
@@ -56,7 +60,7 @@ func Auth(tokenMaker token.TokenMaker) gin.HandlerFunc {
 //   - No Authorization header → anonymous, proceed normally.
 //   - Has header but invalid/expired → reject with 401.
 //   - Has header and valid → set user ID, proceed.
-func OptionalAuth(tokenMaker token.TokenMaker) gin.HandlerFunc {
+func OptionalAuth(tv tokenVerifier) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -64,7 +68,7 @@ func OptionalAuth(tokenMaker token.TokenMaker) gin.HandlerFunc {
 			return
 		}
 
-		userID, err := extractAndVerifyToken(authHeader, tokenMaker)
+		userID, err := extractAndVerifyToken(authHeader, tv)
 		if err != nil {
 			handleTokenError(c, err)
 			c.Abort()
@@ -76,17 +80,15 @@ func OptionalAuth(tokenMaker token.TokenMaker) gin.HandlerFunc {
 	}
 }
 
-// extractAndVerifyToken parses the Authorization header and verifies the token.
-func extractAndVerifyToken(authHeader string, tokenMaker token.TokenMaker) (string, error) {
+func extractAndVerifyToken(authHeader string, tv tokenVerifier) (string, error) {
 	scheme, tokenString, found := strings.Cut(authHeader, " ")
 	if !found || scheme != "Bearer" || tokenString == "" {
 		return "", errBadAuthFormat
 	}
 
-	return tokenMaker.VerifyToken(tokenString)
+	return tv.VerifyToken(tokenString)
 }
 
-// handleTokenError sends the appropriate 401 response based on the error type.
 func handleTokenError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, errBadAuthFormat):

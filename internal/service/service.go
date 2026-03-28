@@ -6,7 +6,6 @@ import (
 
 	"github.com/katatrina/url-shortener/internal/cache"
 	"github.com/katatrina/url-shortener/internal/model"
-	"github.com/katatrina/url-shortener/internal/token"
 )
 
 type URLRepository interface {
@@ -42,13 +41,17 @@ type ClickCollector interface {
 	Track(urlID string, meta model.ClickMeta)
 }
 
+type tokenCreator interface {
+	CreateToken(userID string) (string, time.Time, error)
+}
+
 type Service struct {
 	urlRepo        URLRepository
 	userRepo       UserRepository
 	urlCache       URLCacheRepository
 	clickEventRepo ClickEventQueryRepository
 	statsRepo      URLStatsQueryRepository
-	tokenMaker     token.TokenMaker
+	tokenMaker     tokenCreator
 	clickCollector ClickCollector
 }
 
@@ -58,7 +61,7 @@ func New(
 	urlCache URLCacheRepository,
 	clickEventRepo ClickEventQueryRepository,
 	statsRepo URLStatsQueryRepository,
-	tokenMaker token.TokenMaker,
+	tokenMaker tokenCreator,
 	clickCollector ClickCollector,
 ) *Service {
 	return &Service{

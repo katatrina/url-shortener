@@ -11,15 +11,12 @@ import (
 	"github.com/katatrina/url-shortener/internal/shortcode"
 )
 
-// maxGenerateAttempts is the number of times we retry generating a short code
-// before giving up. With 62^7 combinations, hitting this limit means something
-// is seriously wrong with the random source.
 const maxGenerateAttempts = 5
 
 func (s *Service) ShortenURL(ctx context.Context, params model.ShortenURLParams) (*model.URL, error) {
 	var code string
 
-	if params.CustomAlias != "" { // User wants a custom short code.
+	if params.CustomAlias != "" {
 		exists, err := s.urlRepo.ShortCodeExists(ctx, params.CustomAlias)
 		if err != nil {
 			return nil, err
@@ -30,7 +27,6 @@ func (s *Service) ShortenURL(ctx context.Context, params model.ShortenURLParams)
 
 		code = params.CustomAlias
 	} else {
-		// Generate a random short code, retry on collision.
 		var err error
 		code, err = s.generateUniqueCode(ctx)
 		if err != nil {
@@ -127,10 +123,9 @@ func (s *Service) DeleteUserURL(ctx context.Context, shortCode, userID string) e
 
 	// Invalidate cache AFTER successful DB delete.
 	// If DB delete fails, we don't want to remove a valid cache.
-	// Worst case: cache delete fails, stale cache remains but will be auto-purged by TTL.
+	// Worst case: cache delete fails, stale cache remains but will be auto-evicted by TTL.
 	if s.urlCache != nil {
 		if err := s.urlCache.Delete(ctx, shortCode); err != nil {
-			// Cache failure should not block a successful business operation.
 			log.Printf("[WARN] cache delete failed for %s: %v", shortCode, err)
 		}
 	}

@@ -26,9 +26,9 @@ type URLResponse struct {
 	ShortCode   string `json:"shortCode"`
 	ShortURL    string `json:"shortUrl"`
 	OriginalURL string `json:"originalUrl"`
-	ClickCount  int64  `json:"clickCount"`
-	ExpiresAt   *int64 `json:"expiresAt"`
-	CreatedAt   int64  `json:"createdAt"`
+	//ClickCount  int64  `json:"clickCount"`
+	ExpiresAt *int64 `json:"expiresAt"`
+	CreatedAt int64  `json:"createdAt"`
 }
 
 type LoginResponse struct {
@@ -51,8 +51,8 @@ func newURLResponse(u *model.URL, baseURL string) URLResponse {
 		ShortCode:   u.ShortCode,
 		ShortURL:    baseURL + "/" + u.ShortCode,
 		OriginalURL: u.OriginalURL,
-		ClickCount:  u.ClickCount,
-		CreatedAt:   u.CreatedAt.Unix(),
+		//ClickCount:  u.ClickCount,
+		CreatedAt: u.CreatedAt.Unix(),
 	}
 
 	if u.ExpiresAt != nil {

@@ -9,7 +9,6 @@ import (
 	"github.com/katatrina/url-shortener/internal/model"
 )
 
-// Resolve .
 func (s *Service) Resolve(ctx context.Context, shortCode string, meta model.ClickMeta) (string, error) {
 	if s.urlCache != nil {
 		cachedURL, err := s.urlCache.Get(ctx, shortCode)

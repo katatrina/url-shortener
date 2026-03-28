@@ -40,7 +40,6 @@ url-shortener/
 │   ├── config/                # Environment config loading
 │   ├── handler/               # HTTP handlers (request/response)
 │   ├── middleware/             # Auth + rate limiting middleware
-│   ├── mock/                  # Generated mocks (gomock)
 │   ├── model/                 # Domain models and errors
 │   ├── repository/            # Database queries
 │   ├── request/               # Validation, normalization, pagination
@@ -198,15 +197,6 @@ go test ./... -v
 
 # Run a specific package
 go test ./internal/service/ -v
-```
-
-### Generating Mocks
-
-Mocks are generated using [gomock](https://github.com/uber-go/mock):
-
-```bash
-go install go.uber.org/mock/mockgen@latest
-go generate ./internal/mock/...
 ```
 
 ## Configuration
