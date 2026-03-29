@@ -1,4 +1,4 @@
-.PHONY: migrate-up migrate-down server mockgen infra infra-down
+.PHONY: migrate-up migrate-down server mockgen infra infra-down lint
 
 include .env
 
@@ -14,10 +14,11 @@ migrate-down-1:
 server:
 	go run ./cmd/api
 
-# Start all infrastructure (DB, Redis, Prometheus, Grafana)
 infra:
 	docker compose up -d
 
-# Stop all infrastructure
 infra-down:
 	docker compose down
+
+lint:
+	golangci-lint run
