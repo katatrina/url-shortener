@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -21,7 +21,7 @@ func RateLimit(limiter *redis_rate.Limiter, limit redis_rate.Limit) gin.HandlerF
 		if err != nil {
 			// Redis down — let the request through (Fail open).
 			// Else, Fail closed = block.
-			log.Printf("[WARN] rate limit check failed: %v", err)
+			slog.Warn("rate limit check failed", "error", err)
 			c.Next()
 			return
 		}

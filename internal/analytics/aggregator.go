@@ -2,7 +2,7 @@ package analytics
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"sync"
 	"time"
 )
@@ -37,15 +37,15 @@ func NewAggregator(repo URLStatsRepository, interval time.Duration) *Aggregator 
 func (a *Aggregator) Start() {
 	a.wg.Add(1)
 	go a.run()
-	log.Printf("[INFO] aggregator started: interval=%s", a.interval)
+	slog.Info("aggregator started", "interval", a.interval)
 }
 
 // Stop signals the aggregation loop to stop and waits for it to finish.
 func (a *Aggregator) Stop() {
-	log.Println("[INFO] aggregator stopping...")
+	slog.Info("aggregator stopping...")
 	close(a.done)
 	a.wg.Wait()
-	log.Println("[INFO] aggregator stopped")
+	slog.Info("aggregator stopped")
 }
 
 func (a *Aggregator) run() {
@@ -81,7 +81,7 @@ func (a *Aggregator) aggregate() {
 	// Aggregate today's clicks.
 	rowsToday, err := a.repo.AggregateDaily(ctx, today)
 	if err != nil {
-		log.Printf("[ERROR] aggregation failed for %s: %v", today.Format("2006-01-02"), err)
+		slog.Error("aggregation failed", "date", today.Format("2006-01-02"), "error", err)
 		return
 	}
 
@@ -91,11 +91,11 @@ func (a *Aggregator) aggregate() {
 	yesterday := today.AddDate(0, 0, -1)
 	rowsYesterday, err := a.repo.AggregateDaily(ctx, yesterday)
 	if err != nil {
-		log.Printf("[ERROR] aggregation failed for %s: %v", yesterday.Format("2006-01-02"), err)
+		slog.Error("aggregation failed", "date", yesterday.Format("2006-01-02"), "error", err)
 		return
 	}
 
 	if rowsToday > 0 || rowsYesterday > 0 {
-		log.Printf("[DEBUG] aggregation complete: today=%d URLs, yesterday=%d URLs", rowsToday, rowsYesterday)
+		slog.Debug("aggregation complete", "today_urls", rowsToday, "yesterday_urls", rowsYesterday)
 	}
 }

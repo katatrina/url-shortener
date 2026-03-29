@@ -2,7 +2,7 @@ package handler
 
 import (
 	"errors"
-	"log"
+	"log/slog"
 
 	"github.com/gin-gonic/gin"
 	"github.com/katatrina/url-shortener/internal/middleware"
@@ -21,7 +21,7 @@ func (h *Handler) GetURLStats(c *gin.Context) {
 			errors.Is(err, model.ErrURLOwnerMismatch):
 			response.NotFound(c, response.CodeURLNotFound, "URL not found")
 		default:
-			log.Printf("[ERROR] failed to get URL stats: %v", err)
+			slog.Error("failed to get URL stats", "error", err)
 			response.InternalServerError(c)
 		}
 		return

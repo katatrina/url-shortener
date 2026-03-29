@@ -2,7 +2,7 @@ package analytics
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -57,8 +57,9 @@ func (c *ClickCollector) Start() {
 		c.wg.Add(1)
 		go c.worker(i)
 	}
-	log.Printf("[INFO] analytics collector started: %d workers, buffer=%d, batch=%d, flush=%s",
-		c.cfg.WorkerCount, c.cfg.ChannelBuffer, c.cfg.BatchSize, c.cfg.FlushInterval)
+	slog.Info("analytics collector started",
+		"workers", c.cfg.WorkerCount, "buffer", c.cfg.ChannelBuffer,
+		"batch_size", c.cfg.BatchSize, "flush_interval", c.cfg.FlushInterval)
 }
 
 // Stop signals all workers to shut down and waits for them to finish.
@@ -71,10 +72,10 @@ func (c *ClickCollector) Start() {
 //
 // After Stop returns, it's guaranteed that all events have been persisted.
 func (c *ClickCollector) Stop() {
-	log.Println("[INFO] analytics collector stopping, draining remaining events...")
+	slog.Info("analytics collector stopping, draining remaining events...")
 	close(c.eventCh)
 	c.wg.Wait()
-	log.Println("[INFO] analytics collector stopped")
+	slog.Info("analytics collector stopped")
 }
 
 // Track queues a click event for async processing.
@@ -105,7 +106,7 @@ func (c *ClickCollector) Track(urlID string, meta model.ClickMeta) {
 	default:
 		// Channel full — event dropped.
 		metrics.AnalyticsEventsDropped.Inc()
-		log.Printf("[WARN] channel full, dropping event for url=%s", urlID)
+		slog.Warn("channel full, dropping event", "url_id", urlID)
 	}
 }
 
@@ -149,11 +150,11 @@ func (c *ClickCollector) worker(id int) {
 			// In a production system, you might push failed events to a dead letter queue
 			// or retry with backoff. For now, logging is sufficient.
 			metrics.AnalyticsBatchErrors.Inc()
-			log.Printf("[ERROR] worker %d: batch insert failed (%d events lost): %v", id, len(batch), err)
+			slog.Error("batch insert failed", "worker", id, "events_lost", len(batch), "error", err)
 		} else {
 			metrics.AnalyticsEventsInserted.Add(float64(len(batch)))
 			metrics.AnalyticsBatchFlushTotal.Inc()
-			log.Printf("[DEBUG] worker %d: flushed %d events", id, len(batch))
+			slog.Debug("flushed events", "worker", id, "count", len(batch))
 		}
 
 		// Reset the batch. We keep the underlying array to avoid re-allocation.
@@ -167,7 +168,7 @@ func (c *ClickCollector) worker(id int) {
 				// Channel closed — this is graceful shutdown.
 				// Flush whatever we have and exit.
 				flush()
-				log.Printf("[INFO] worker %d: shutdown complete", id)
+				slog.Info("worker shutdown complete", "worker", id)
 				return
 			}
 

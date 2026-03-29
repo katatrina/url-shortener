@@ -2,7 +2,7 @@ package handler
 
 import (
 	"errors"
-	"log"
+	"log/slog"
 
 	"github.com/gin-gonic/gin"
 	"github.com/katatrina/url-shortener/internal/model"
@@ -27,7 +27,7 @@ func (h *Handler) Register(c *gin.Context) {
 		case errors.Is(err, model.ErrEmailAlreadyExists):
 			response.Conflict(c, response.CodeEmailAlreadyExists, "Email already exists")
 		default:
-			log.Printf("[ERROR] failed to register user: %v", err)
+			slog.Error("failed to register user", "error", err)
 			response.InternalServerError(c)
 		}
 		return
@@ -52,7 +52,7 @@ func (h *Handler) Login(c *gin.Context) {
 		case errors.Is(err, model.ErrIncorrectCredentials):
 			response.Unauthorized(c, response.CodeCredentialsInvalid, "Incorrect email or password")
 		default:
-			log.Printf("[ERROR] failed to login: %v", err)
+			slog.Error("failed to login", "error", err)
 			response.InternalServerError(c)
 		}
 		return

@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -126,7 +126,7 @@ func (s *Service) DeleteUserURL(ctx context.Context, shortCode, userID string) e
 	// Worst case: cache delete fails, stale cache remains but will be auto-evicted by TTL.
 	if s.urlCache != nil {
 		if err := s.urlCache.Delete(ctx, shortCode); err != nil {
-			log.Printf("[WARN] cache delete failed for %s: %v", shortCode, err)
+			slog.Warn("cache delete failed", "short_code", shortCode, "error", err)
 		}
 	}
 

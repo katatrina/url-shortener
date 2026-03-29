@@ -2,7 +2,7 @@ package handler
 
 import (
 	"errors"
-	"log"
+	"log/slog"
 
 	"github.com/gin-gonic/gin"
 	"github.com/katatrina/url-shortener/internal/middleware"
@@ -30,7 +30,7 @@ func (h *Handler) ShortenURL(c *gin.Context) {
 		case errors.Is(err, model.ErrShortCodeTaken):
 			response.Conflict(c, response.CodeShortCodeTaken, "Custom alias is already taken")
 		default:
-			log.Printf("[ERROR] failed to shorten URL: %v", err)
+			slog.Error("failed to shorten URL", "error", err)
 			response.InternalServerError(c)
 		}
 		return
@@ -45,7 +45,7 @@ func (h *Handler) ListUserURLs(c *gin.Context) {
 
 	urls, total, err := h.service.ListUserURLs(c.Request.Context(), userID, pagination.Limit(), pagination.Offset())
 	if err != nil {
-		log.Printf("[ERROR] failed to list user URLs: %v", err)
+		slog.Error("failed to list user URLs", "error", err)
 		response.InternalServerError(c)
 		return
 	}
@@ -69,7 +69,7 @@ func (h *Handler) GetUserURL(c *gin.Context) {
 			errors.Is(err, model.ErrURLOwnerMismatch):
 			response.NotFound(c, response.CodeURLNotFound, "URL not found")
 		default:
-			log.Printf("[ERROR] failed to get URL: %v", err)
+			slog.Error("failed to get URL", "error", err)
 			response.InternalServerError(c)
 		}
 		return
@@ -89,7 +89,7 @@ func (h *Handler) DeleteUserURL(c *gin.Context) {
 			errors.Is(err, model.ErrURLOwnerMismatch):
 			response.NotFound(c, response.CodeURLNotFound, "URL not found")
 		default:
-			log.Printf("[ERROR] failed to delete URL: %v", err)
+			slog.Error("failed to delete URL", "error", err)
 			response.InternalServerError(c)
 		}
 		return

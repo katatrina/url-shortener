@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -17,6 +18,7 @@ import (
 	"github.com/katatrina/url-shortener/internal/cache"
 	"github.com/katatrina/url-shortener/internal/config"
 	"github.com/katatrina/url-shortener/internal/handler"
+	"github.com/katatrina/url-shortener/internal/logger"
 	"github.com/katatrina/url-shortener/internal/metrics"
 	"github.com/katatrina/url-shortener/internal/middleware"
 	"github.com/katatrina/url-shortener/internal/repository"
@@ -28,9 +30,12 @@ import (
 )
 
 func main() {
+	logger.Setup()
+
 	cfg, err := config.LoadConfig(".env")
 	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+		slog.Error("failed to load config", "error", err)
+		os.Exit(1)
 	}
 
 	// ---- Metrics ----
@@ -53,14 +58,16 @@ func main() {
 
 	db, err := pgxpool.New(dbCtx, cfg.DatabaseURL)
 	if err != nil {
-		log.Fatalf("Failed to create database pool: %v", err)
+		slog.Error("failed to create database pool", "error", err)
+		os.Exit(1)
 	}
 	defer db.Close()
 
 	if err = db.Ping(dbCtx); err != nil {
-		log.Fatalf("Failed to ping database: %v", err)
+		slog.Error("failed to ping database", "error", err)
+		os.Exit(1)
 	}
-	log.Println("Connected to database successfully")
+	slog.Info("connected to database")
 
 	// Register DB pool metrics AFTER pool is created.
 	metrics.RegisterDBPool(db)
@@ -68,20 +75,23 @@ func main() {
 	// ---- Redis ----
 	redisOpts, err := redis.ParseURL(cfg.RedisURL)
 	if err != nil {
-		log.Fatalf("Failed to parse Redis URL: %v", err)
+		slog.Error("failed to parse Redis URL", "error", err)
+		os.Exit(1)
 	}
 	rdb := redis.NewClient(redisOpts)
 	defer rdb.Close()
 
 	if err = rdb.Ping(ctx).Err(); err != nil {
-		log.Fatalf("Failed to ping Redis: %v", err)
+		slog.Error("failed to ping Redis", "error", err)
+		os.Exit(1)
 	}
-	log.Println("Connected to Redis successfully")
+	slog.Info("connected to Redis")
 
 	// ---- Dependencies ----
 	tokenMaker, err := token.NewJWTMaker([]byte(cfg.JWTSecret), cfg.JWTExpiry)
 	if err != nil {
-		log.Fatalf("Failed to create token maker: %v", err)
+		slog.Error("failed to create token maker", "error", err)
+		os.Exit(1)
 	}
 
 	rateLimiter := redis_rate.NewLimiter(rdb)
@@ -168,9 +178,10 @@ func main() {
 	// Start the server in a goroutine so it doesn't block the main goroutine.
 	// The main goroutine needs to stay free to listen for shutdown signals.
 	go func() {
-		log.Printf("Server starting on %s", srv.Addr)
+		slog.Info("server starting", "addr", srv.Addr)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("Server failed: %v", err)
+			slog.Error("server failed", "error", err)
+			os.Exit(1)
 		}
 	}()
 
@@ -179,7 +190,7 @@ func main() {
 	// Block here until we receive SIGINT (Ctrl+C) or SIGTERM (Docker/K8s stop).
 	// When a signal arrives, ctx is canceled, and <-ctx.Done() unblocks.
 	<-ctx.Done()
-	log.Println("Shutdown signal received")
+	slog.Info("shutdown signal received")
 
 	// Restore default signal behavior. If the operator sends a second signal
 	// during shutdown (double Ctrl+C), the process will exit immediately
@@ -193,9 +204,9 @@ func main() {
 	defer shutdownCancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Printf("[ERROR] HTTP server shutdown error: %v", err)
+		slog.Error("HTTP server shutdown error", "error", err)
 	}
-	log.Println("HTTP server stopped")
+	slog.Info("HTTP server stopped")
 
 	// Step 2: Stop the analytics collector first.
 	// This must happen AFTER the HTTP server stops, because:
@@ -214,5 +225,5 @@ func main() {
 
 	// Step 3: Close infrastructure connections.
 	// DB and Redis are closed by their deferred Close() calls.
-	log.Println("Shutdown complete")
+	slog.Info("shutdown complete")
 }

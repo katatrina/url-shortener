@@ -2,7 +2,7 @@ package handler
 
 import (
 	"errors"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -31,7 +31,7 @@ func (h *Handler) Redirect(c *gin.Context) {
 		case errors.Is(err, model.ErrURLExpired):
 			response.Gone(c, response.CodeURLExpired, "This short URL has expired")
 		default:
-			log.Printf("[ERROR] failed to resolve short URL: %v", err)
+			slog.Error("failed to resolve short URL", "error", err)
 			response.InternalServerError(c)
 		}
 		return
