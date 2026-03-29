@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/katatrina/url-shortener/internal/metrics"
 	"github.com/katatrina/url-shortener/internal/model"
 )
 
@@ -102,6 +103,8 @@ func (c *ClickCollector) Track(urlID string, meta model.ClickMeta) {
 	select {
 	case c.eventCh <- event:
 	default:
+		// Channel full — event dropped.
+		metrics.AnalyticsEventsDropped.Inc()
 		log.Printf("[WARN] channel full, dropping event for url=%s", urlID)
 	}
 }
@@ -145,8 +148,11 @@ func (c *ClickCollector) worker(id int) {
 			// DB insert failed — log and discard the batch.
 			// In a production system, you might push failed events to a dead letter queue
 			// or retry with backoff. For now, logging is sufficient.
+			metrics.AnalyticsBatchErrors.Inc()
 			log.Printf("[ERROR] worker %d: batch insert failed (%d events lost): %v", id, len(batch), err)
 		} else {
+			metrics.AnalyticsEventsInserted.Add(float64(len(batch)))
+			metrics.AnalyticsBatchFlushTotal.Inc()
 			log.Printf("[DEBUG] worker %d: flushed %d events", id, len(batch))
 		}
 
@@ -177,6 +183,7 @@ func (c *ClickCollector) worker(id int) {
 		case <-ticker.C:
 			// Timer fired — flush partial batch to avoid holding events too long.
 			flush()
+			metrics.AnalyticsQueueDepth.Set(float64(len(c.eventCh)))
 		}
 	}
 }

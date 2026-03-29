@@ -17,11 +17,13 @@ import (
 	"github.com/katatrina/url-shortener/internal/cache"
 	"github.com/katatrina/url-shortener/internal/config"
 	"github.com/katatrina/url-shortener/internal/handler"
+	"github.com/katatrina/url-shortener/internal/metrics"
 	"github.com/katatrina/url-shortener/internal/middleware"
 	"github.com/katatrina/url-shortener/internal/repository"
 	"github.com/katatrina/url-shortener/internal/response"
 	"github.com/katatrina/url-shortener/internal/service"
 	"github.com/katatrina/url-shortener/internal/token"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -30,6 +32,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
+
+	// ---- Metrics ----
+	// Register all Prometheus metrics before starting the server.
+	// Must happen before any metric is used, otherwise Inc()/Observe() panics.
+	metrics.Register()
 
 	// Create a context that is canceled when the process receives SIGINT or SIGTERM.
 	//
@@ -94,10 +101,28 @@ func main() {
 
 	// ---- Router ----
 	router := gin.Default()
+
+	// Metrics middleware must be FIRST so it captures ALL requests,
+	// including those rejected by auth or rate limiting.
+	router.Use(middleware.Metrics())
+
 	router.NoRoute(func(c *gin.Context) {
 		response.NotFound(c, response.CodeRouteNotFound,
 			"The requested endpoint does not exist")
 	})
+
+	// Prometheus metrics endpoint.
+	//
+	// Why gin.WrapH instead of writing our own handler?
+	// promhttp.Handler() returns a standard net/http handler that formats
+	// all registered metrics in Prometheus's exposition format.
+	// gin.WrapH adapts it to Gin's handler signature.
+	//
+	// This endpoint is intentionally NOT under /api/v1 because:
+	//   1. It's for infrastructure (Prometheus), not for API consumers
+	//   2. By convention, /metrics is the standard path Prometheus expects
+	//   3. It should NOT go through auth or rate limiting middleware
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	router.GET("/:code", h.Redirect)
 

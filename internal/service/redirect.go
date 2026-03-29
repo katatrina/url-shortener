@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/katatrina/url-shortener/internal/cache"
+	"github.com/katatrina/url-shortener/internal/metrics"
 	"github.com/katatrina/url-shortener/internal/model"
 )
 
@@ -13,17 +14,23 @@ func (s *Service) Resolve(ctx context.Context, shortCode string, meta model.Clic
 	if s.urlCache != nil {
 		cachedURL, err := s.urlCache.Get(ctx, shortCode)
 		if err != nil {
+			// Redis error — not a miss, it's an infrastructure failure.
+			metrics.CacheErrors.Inc()
 			log.Printf("[WARN] cache get failed for %s: %v", shortCode, err)
 		} else {
 			if cachedURL != nil {
+				// Cache HIT — URL found in Redis.
+				metrics.CacheRequests.WithLabelValues("hit").Inc()
+
 				if cachedURL.ExpiresAt != nil && time.Now().Unix() > *cachedURL.ExpiresAt {
 					return "", model.ErrURLExpired
 				}
 
 				s.trackClick(cachedURL.ID, meta)
-
 				return cachedURL.OriginalURL, nil
 			}
+			// Cache MISS — URL not in Redis, will query DB.
+			metrics.CacheRequests.WithLabelValues("miss").Inc()
 		}
 	}
 
