@@ -1,0 +1,31 @@
+# Version control
+.git
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+
+# Environment and secrets
+.env
+
+# Go build artifacts
+vendor/
+tmp/
+*.exe
+
+# Documentation
+docs/
+README.md
+
+# Infrastructure (not needed inside the app container)
+infra/
+docker-compose.yml
+Makefile
+
+# CI/CD
+.github/
+
+# Coverage reports
+coverage.out
+*.prof

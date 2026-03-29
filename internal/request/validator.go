@@ -56,9 +56,9 @@ func init() {
 }
 
 // TranslateValidationErrors converts validator.ValidationErrors to a slice of FieldError.
-func TranslateValidationErrors(err validator.ValidationErrors) []FieldError {
-	var fieldErrors []FieldError
-	for _, e := range err {
+func TranslateValidationErrors(errs validator.ValidationErrors) []FieldError {
+	fieldErrors := make([]FieldError, 0, len(errs))
+	for _, e := range errs {
 		fieldErrors = append(fieldErrors, FieldError{
 			Field:   toCamelCase(e.Field()),
 			Value:   e.Value(),

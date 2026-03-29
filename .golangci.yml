@@ -1,0 +1,65 @@
+# golangci-lint configuration
+# Docs: https://golangci-lint.run/usage/configuration/
+version: "2"
+
+run:
+  # Timeout for the entire linting process.
+  # Default is 1m, which is tight for large projects.
+  # CI machines are slower than your laptop — give it breathing room.
+  timeout: 5m
+
+linters:
+  # Start with the default set and add extras.
+  # "enable" adds to defaults, not replaces them.
+  enable:
+    # --- Bug Detection ---
+
+    # bodyclose: checks that HTTP response bodies are closed.
+    # Unclosed bodies leak connections and file descriptors.
+    - bodyclose
+
+    # sqlclosecheck: checks that sql.Rows and sql.Stmt are closed.
+    # Similar to bodyclose but for database operations.
+    - sqlclosecheck
+
+    # nilerr: finds code that returns nil when err is not nil.
+    # Example: if err != nil { return nil }  ← should return err!
+    - nilerr
+
+    # --- Code Quality ---
+
+    # govet: reports suspicious constructs (printf format mismatches,
+    # unreachable code, shadowed variables, etc).
+    # This is basically "go vet" on steroids.
+    - govet
+
+    # staticcheck: advanced static analysis. Finds deprecated API usage,
+    # impossible conditions, unnecessary conversions, and more.
+    # One of the most valuable linters — catches real bugs.
+    - staticcheck
+
+    # ineffassign: detects assignments to variables that are never used afterward.
+    # Example: x = computeExpensive(); x = 5  ← first assignment is wasted.
+    - ineffassign
+
+    # unused: finds unused functions, types, constants, variables.
+    # Dead code is confusing and a maintenance burden.
+    - unused
+
+    # --- Style & Consistency ---
+
+    # misspell: finds commonly misspelled English words in comments and strings.
+    # Catches "recieve" → "receive", "occured" → "occurred", etc.
+    - misspell
+
+    # --- Performance ---
+
+    # prealloc: finds slice declarations that could be preallocated.
+    # Example: var s []int; for range items { s = append(s, ...) }
+    # → s := make([]int, 0, len(items)) avoids repeated growing.
+    - prealloc
+
+issues:
+  # Show all issues, don't limit per-linter.
+  max-issues-per-linter: 0
+  max-same-issues: 0
