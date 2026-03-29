@@ -1,6 +1,9 @@
 package metrics
 
-import "github.com/prometheus/client_golang/prometheus"
+import (
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/prometheus/client_golang/prometheus"
+)
 
 // -------------------------------------------------------------------
 // Metric naming convention trong Prometheus:
@@ -210,4 +213,16 @@ func Register() {
 		CacheRequests,
 		CacheErrors,
 	)
+}
+
+// RegisterDBPool registers the database connection pool collector.
+//
+// This is separate from Register() because it needs a *pgxpool.Pool reference,
+// which isn't available at metrics package init time — it's created in main().
+// So the call sequence in main.go is:
+//   1. metrics.Register()         — register static metrics
+//   2. pgxpool.New(...)           — create DB pool
+//   3. metrics.RegisterDBPool(db) — register pool collector
+func RegisterDBPool(pool *pgxpool.Pool) {
+	prometheus.MustRegister(NewDBPoolCollector(pool))
 }

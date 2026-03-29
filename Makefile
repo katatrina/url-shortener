@@ -1,9 +1,6 @@
-.PHONY: compose migrate-up migrate-down migrate-down-1 server
+.PHONY: migrate-up migrate-down server mockgen infra infra-down
 
 include .env
-
-compose:
-	docker compose up -d
 
 migrate-up:
 	migrate -path migrations -database "$(DATABASE_URL)" -verbose up
@@ -16,3 +13,11 @@ migrate-down-1:
 
 server:
 	go run ./cmd/api
+
+# Start all infrastructure (DB, Redis, Prometheus, Grafana)
+infra:
+	docker compose up -d
+
+# Stop all infrastructure
+infra-down:
+	docker compose down

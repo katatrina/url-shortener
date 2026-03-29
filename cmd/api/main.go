@@ -62,6 +62,9 @@ func main() {
 	}
 	log.Println("Connected to database successfully")
 
+	// Register DB pool metrics AFTER pool is created.
+	metrics.RegisterDBPool(db)
+
 	// ---- Redis ----
 	redisOpts, err := redis.ParseURL(cfg.RedisURL)
 	if err != nil {
