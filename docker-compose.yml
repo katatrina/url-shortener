@@ -15,5 +15,46 @@ services:
     ports:
       - "6379:6379"
 
+  # ---- Observability Stack ----
+
+  prometheus:
+    image: prom/prometheus:v3.4.0
+    ports:
+      - "9090:9090"
+    volumes:
+      # Mount our config file into the container.
+      # Prometheus reads this at startup to know what to scrape.
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      # Named volume for Prometheus data persistence.
+      # Without this, all historical metrics are lost when the container restarts.
+      - prometheus_data:/prometheus
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  grafana:
+    image: grafana/grafana:11.6.0
+    ports:
+      - "3000:3000"
+    environment:
+      # Default admin credentials for development.
+      # In production, use secrets management (Docker secrets, Vault, etc).
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      # Disable login page for dev convenience — auto-login as admin.
+      # NEVER do this in production.
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+    volumes:
+      # Provisioning: Grafana can auto-configure datasources and dashboards
+      # from YAML files at startup. This means you don't have to manually
+      # click through the UI to add Prometheus as a datasource every time
+      # you recreate the container. Infrastructure as Code, baby.
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
 volumes:
   postgres_data:
+  prometheus_data:
+  grafana_data:

@@ -1,0 +1,18 @@
+# This file tells Grafana where to find Prometheus.
+# It's loaded automatically at startup — no manual configuration needed.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    # "proxy" means Grafana's backend makes the request to Prometheus,
+    # not the user's browser. This is more secure (Prometheus URL isn't
+    # exposed to the browser) and works even if the user can't reach
+    # Prometheus directly.
+    access: proxy
+    # URL is from Grafana's perspective (inside Docker network).
+    # Both Grafana and Prometheus are in the same Docker Compose network,
+    # so Grafana can reach Prometheus by service name.
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false

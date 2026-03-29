@@ -1,0 +1,17 @@
+# This file tells Grafana where to find dashboard JSON files.
+# Grafana will scan the specified folder and auto-import any .json files.
+apiVersion: 1
+
+providers:
+  - name: "URL Shortener"
+    orgId: 1
+    folder: "URL Shortener"
+    type: file
+    disableDeletion: false
+    editable: true
+    # How often Grafana re-reads dashboard files from disk.
+    # If you update a dashboard JSON, Grafana picks it up within this interval.
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/provisioning/dashboards
+      foldersFromFilesStructure: false

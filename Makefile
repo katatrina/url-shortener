@@ -1,6 +1,9 @@
-.PHONY: migrate-up migrate-down server mockgen
+.PHONY: compose migrate-up migrate-down migrate-down-1 server
 
 include .env
+
+compose:
+	docker compose up -d
 
 migrate-up:
 	migrate -path migrations -database "$(DATABASE_URL)" -verbose up
