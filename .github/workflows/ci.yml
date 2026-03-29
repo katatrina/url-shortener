@@ -32,6 +32,9 @@ permissions:
   contents: read
   packages: write  # Needed for pushing Docker images to ghcr.io
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   # =============================================================
   # Job 1: Lint
