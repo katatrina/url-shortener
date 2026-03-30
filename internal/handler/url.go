@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/katatrina/url-shortener/internal/middleware"
@@ -22,6 +23,11 @@ func (h *Handler) ShortenURL(c *gin.Context) {
 		OriginalURL: req.OriginalURL,
 		CustomAlias: req.CustomAlias,
 		UserID:      middleware.GetAuthUserID(c),
+	}
+
+	if req.ExpiresAt != nil {
+		t := time.Unix(*req.ExpiresAt, 0)
+		arg.ExpiresAt = &t
 	}
 
 	url, err := h.service.ShortenURL(c.Request.Context(), arg)

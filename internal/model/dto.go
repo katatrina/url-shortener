@@ -31,3 +31,9 @@ type ClickMeta struct {
 	UserAgent string
 	Referer   string
 }
+
+type GetURLStatsParams struct {
+	UserID    string
+	ShortCode string
+	Days      int
+}

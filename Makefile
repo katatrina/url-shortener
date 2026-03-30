@@ -1,4 +1,4 @@
-.PHONY: migrate-up migrate-down server mockgen infra infra-down lint
+.PHONY: migrate-up migrate-down server mockgen infra infra-down lint service-test
 
 include .env
 
@@ -22,3 +22,6 @@ infra-down:
 
 lint:
 	golangci-lint run
+
+service-test:
+	go test -v ./internal/service

@@ -62,5 +62,5 @@ func (h *Handler) Login(c *gin.Context) {
 		AccessToken:          result.AccessToken,
 		AccessTokenExpiresAt: result.AccessTokenExpiresAt.Unix(),
 		User:                 newUserResponse(result.User),
-	}, "Login successful")
+	}, "Login successfully")
 }

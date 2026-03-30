@@ -8,40 +8,48 @@ import (
 )
 
 const (
-	defaultStatsRangeDays = 30
-	defaultTopLimit       = 10
+	defaultTopLimit = 10
 )
 
-func (s *Service) GetURLStats(ctx context.Context, shortCode, userID string) (*model.URLStats, error) {
-	u, err := s.urlRepo.FindByShortCode(ctx, shortCode)
+func (s *Service) GetURLStats(ctx context.Context, params model.GetURLStatsParams) (*model.URLStatsResponse, error) {
+	u, err := s.urlRepo.FindByShortCode(ctx, params.ShortCode)
 	if err != nil {
 		return nil, err
 	}
 
-	if u.UserID == nil || *u.UserID != userID {
+	if u.UserID == nil || *u.UserID != params.UserID {
 		return nil, model.ErrURLOwnerMismatch
 	}
 
 	to := time.Now().UTC().Truncate(24 * time.Hour)
-	from := to.AddDate(0, 0, -defaultStatsRangeDays)
+	from := to.AddDate(0, 0, -params.Days)
 
 	dailyStats, err := s.statsRepo.GetDailyStats(ctx, u.ID, from, to)
 	if err != nil {
 		return nil, err
 	}
 
-	topReferrers, err := s.clickEventRepo.GetTopReferrers(ctx, u.ID, defaultTopLimit)
+	topReferrers, err := s.clickEventRepo.GetTopReferrers(ctx, u.ID, from, to, defaultTopLimit)
 	if err != nil {
 		return nil, err
 	}
 
-	topCountries, err := s.clickEventRepo.GetTopCountries(ctx, u.ID, defaultTopLimit)
+	topCountries, err := s.clickEventRepo.GetTopCountries(ctx, u.ID, from, to, defaultTopLimit)
 	if err != nil {
 		return nil, err
 	}
 
-	return &model.URLStats{
-		DailyClicks:  dailyStats,
+	dailyResponses := make([]model.DailyStatResponse, len(dailyStats))
+	for i, ds := range dailyStats {
+		dailyResponses[i] = model.DailyStatResponse{
+			Date:       ds.Date.Unix(),
+			ClickCount: ds.ClickCount,
+		}
+	}
+
+	return &model.URLStatsResponse{
+		TotalClicks:  u.ClickCount,
+		DailyClicks:  dailyResponses,
 		TopReferrers: topReferrers,
 		TopCountries: topCountries,
 	}, nil

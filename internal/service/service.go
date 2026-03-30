@@ -20,6 +20,7 @@ type URLRepository interface {
 type UserRepository interface {
 	Create(ctx context.Context, user model.User) (*model.User, error)
 	FindByEmail(ctx context.Context, email string) (*model.User, error)
+	FindByID(ctx context.Context, id string) (*model.User, error)
 }
 
 type URLCacheRepository interface {
@@ -29,8 +30,8 @@ type URLCacheRepository interface {
 }
 
 type ClickEventQueryRepository interface {
-	GetTopReferrers(ctx context.Context, urlID string, limit int) ([]model.ReferrerStat, error)
-	GetTopCountries(ctx context.Context, urlID string, limit int) ([]model.CountryStat, error)
+	GetTopReferrers(ctx context.Context, urlID string, from, to time.Time, limit int) ([]model.ReferrerStat, error)
+	GetTopCountries(ctx context.Context, urlID string, from, to time.Time, limit int) ([]model.CountryStat, error)
 }
 
 type URLStatsQueryRepository interface {

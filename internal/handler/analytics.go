@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"log/slog"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/katatrina/url-shortener/internal/middleware"
@@ -13,8 +14,21 @@ import (
 func (h *Handler) GetURLStats(c *gin.Context) {
 	userID := middleware.MustGetAuthUserID(c)
 	shortCode := c.Param("code")
+	days, _ := strconv.Atoi(c.DefaultQuery("days", "30"))
 
-	stats, err := h.service.GetURLStats(c.Request.Context(), shortCode, userID)
+	// Clamp to a reasonable range
+	if days < 1 {
+		days = 1
+	}
+	if days > 365 {
+		days = 365
+	}
+
+	stats, err := h.service.GetURLStats(c.Request.Context(), model.GetURLStatsParams{
+		UserID:    userID,
+		ShortCode: shortCode,
+		Days:      days,
+	})
 	if err != nil {
 		switch {
 		case errors.Is(err, model.ErrURLNotFound),

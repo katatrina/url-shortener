@@ -10,6 +10,7 @@ import (
 // URLStatsRepository defines what the aggregator needs from the persistence layer.
 type URLStatsRepository interface {
 	AggregateDaily(ctx context.Context, date time.Time) (int64, error)
+	SyncClickCounts(ctx context.Context) (int64, error)
 }
 
 type Aggregator struct {
@@ -97,5 +98,15 @@ func (a *Aggregator) aggregate() {
 
 	if rowsToday > 0 || rowsYesterday > 0 {
 		slog.Debug("aggregation complete", "today_urls", rowsToday, "yesterday_urls", rowsYesterday)
+	}
+
+	synced, err := a.repo.SyncClickCounts(ctx)
+	if err != nil {
+		slog.Error("sync click counts failed", "error", err)
+		return
+	}
+
+	if synced > 0 {
+		slog.Debug("synced click counts", "URLs", synced)
 	}
 }

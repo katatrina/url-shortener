@@ -9,6 +9,7 @@ const (
 	CodeJSONFormatInvalid ErrorCode = "INVALID_JSON_FORMAT"
 
 	CodeURLNotFound    ErrorCode = "URL_NOT_FOUND"
+	CodeUserNotFound   ErrorCode = "USER_NOT_FOUND"
 	CodeURLExpired     ErrorCode = "URL_EXPIRED"
 	CodeShortCodeTaken ErrorCode = "SHORT_CODE_TAKEN"
 

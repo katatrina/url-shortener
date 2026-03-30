@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis_rate/v10"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -119,6 +120,17 @@ func main() {
 	// including those rejected by auth or rate limiting.
 	router.Use(middleware.Metrics())
 
+	// CORS must be before any route handlers.
+	// In production, replace AllowOrigins with your actual frontend domain.
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:5173"}, // Vite dev server
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"RateLimit-Limit", "RateLimit-Remaining", "RateLimit-Reset", "Retry-After"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+
 	router.NoRoute(func(c *gin.Context) {
 		response.NotFound(c, response.CodeRouteNotFound,
 			"The requested endpoint does not exist")
@@ -150,15 +162,24 @@ func main() {
 		v1.POST("/auth/register", h.Register)
 		v1.POST("/auth/login", h.Login)
 
-		protected := v1.Group("/me/urls")
+		protected := v1.Group("/me")
 		protected.Use(middleware.Auth(tokenMaker))
 		{
-			protected.GET("", h.ListUserURLs)
-			protected.GET("/:code", h.GetUserURL)
-			protected.GET("/:code/stats", h.GetURLStats)
-			protected.DELETE("/:code", h.DeleteUserURL)
+			urlGroup := protected.Group("/urls")
+			{
+				urlGroup.GET("", h.ListUserURLs)
+				urlGroup.GET("/:code", h.GetUserURL)
+				urlGroup.GET("/:code/stats", h.GetURLStats)
+				urlGroup.DELETE("/:code", h.DeleteUserURL)
+			}
+
+			protected.GET("/profile", h.GetUserProfile)
 		}
 	}
+
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
 
 	// ---- Start Server ----
 	//
