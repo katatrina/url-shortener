@@ -221,8 +221,6 @@ func main() {
 		}
 	}
 
-
-
 	// ---- Start Server ----
 	//
 	// We use http.Server directly instead of router.Run() because router.Run()
@@ -234,8 +232,11 @@ func main() {
 	// 2. Waits for in-flight requests to complete (up to the timeout)
 	// 3. Returns, allowing us to clean up other resources (collector, DB, Redis)
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%s", cfg.ServerPort),
-		Handler: router,
+		Addr:         fmt.Sprintf(":%s", cfg.ServerPort),
+		Handler:      router,
+		ReadTimeout:  10 * time.Second, // Max thời gian đọc request body
+		WriteTimeout: 15 * time.Second, // Max thời gian ghi response
+		IdleTimeout:  60 * time.Second, // Max thời gian giữ keep-alive connection
 	}
 
 	// Start the server in a goroutine so it doesn't block the main goroutine.
