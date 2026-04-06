@@ -5,14 +5,14 @@ import "github.com/katatrina/url-shortener/internal/model"
 // -- Requests --
 
 type ShortenURLRequest struct {
-	OriginalURL string `json:"originalUrl" validate:"required,http_url,max=2048" normalize:"trim"`
+	LongURL     string `json:"longUrl" validate:"required,http_url,max=2048" normalize:"trim"`
 	CustomAlias string `json:"customAlias" validate:"omitempty,short_code,min=3,max=30" normalize:"trim"`
 	ExpiresAt   *int64 `json:"expiresAt" validate:"omitempty,gt=0"`
 }
 
 type RegisterRequest struct {
 	Email       string `json:"email" validate:"required,email,max=255" normalize:"trim,lower"`
-	DisplayName string `json:"displayName" validate:"required,min=2,max=100" normalize:"trim,single_space"`
+	FullName    string `json:"fullName" validate:"required,min=2,max=100" normalize:"trim,single_space"`
 	Password    string `json:"password" validate:"required,min=8,max_bytes=72,strong_pass"`
 }
 
@@ -24,12 +24,12 @@ type LoginRequest struct {
 // -- Responses --
 
 type URLResponse struct {
-	ShortCode   string `json:"shortCode"`
-	ShortURL    string `json:"shortUrl"`
-	OriginalURL string `json:"originalUrl"`
-	ClickCount  int64  `json:"clickCount"`
-	ExpiresAt   *int64 `json:"expiresAt"`
-	CreatedAt   int64  `json:"createdAt"`
+	ShortCode  string `json:"shortCode"`
+	ShortURL   string `json:"shortUrl"`
+	LongURL    string `json:"longUrl"`
+	ClickCount int64  `json:"clickCount"`
+	ExpiresAt  *int64 `json:"expiresAt"`
+	CreatedAt  int64  `json:"createdAt"`
 }
 
 type LoginResponse struct {
@@ -41,7 +41,7 @@ type LoginResponse struct {
 type UserResponse struct {
 	ID          string `json:"id"`
 	Email       string `json:"email"`
-	DisplayName string `json:"displayName"`
+	FullName    string `json:"fullName"`
 	CreatedAt   int64  `json:"createdAt"`
 }
 
@@ -49,11 +49,11 @@ type UserResponse struct {
 
 func newURLResponse(u *model.URL, baseURL string) URLResponse {
 	resp := URLResponse{
-		ShortCode:   u.ShortCode,
-		ShortURL:    baseURL + "/" + u.ShortCode,
-		OriginalURL: u.OriginalURL,
-		ClickCount:  u.ClickCount,
-		CreatedAt:   u.CreatedAt.Unix(),
+		ShortCode:  u.ShortCode,
+		ShortURL:   baseURL + "/" + u.ShortCode,
+		LongURL:    u.LongURL,
+		ClickCount: u.ClickCount,
+		CreatedAt:  u.CreatedAt.Unix(),
 	}
 
 	if u.ExpiresAt != nil {
@@ -68,7 +68,7 @@ func newUserResponse(u *model.User) UserResponse {
 	return UserResponse{
 		ID:          u.ID,
 		Email:       u.Email,
-		DisplayName: u.DisplayName,
+		FullName:    u.FullName,
 		CreatedAt:   u.CreatedAt.Unix(),
 	}
 }

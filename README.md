@@ -15,19 +15,28 @@ A URL shortening service that converts long URLs into short, shareable links and
 - **Async analytics pipeline** — click events are collected via goroutines + channels, batched, and bulk-inserted
 - **Daily stats aggregation** — background aggregator computes per-URL daily click stats
 - **Analytics API** — view top referrers, countries, and daily click trends per URL
+- **Structured logging** — JSON-formatted logs via `log/slog` for production observability
+- **Prometheus metrics** — HTTP latency, cache hit/miss, analytics pipeline, and DB pool metrics
+- **Grafana dashboards** — pre-provisioned dashboards for monitoring
+- **CI/CD** — automated lint, test, and build via GitHub Actions
+- **CORS support** — configured for frontend development
 
 ## Tech Stack
 
-| Component      | Technology              |
-|----------------|-------------------------|
-| Language        | Go 1.25                 |
-| HTTP Framework  | Gin                     |
-| Database        | PostgreSQL 16 (pgx)     |
-| Cache           | Redis 7 (go-redis)      |
-| Rate Limiting   | redis_rate              |
-| Auth            | JWT (HS256)             |
-| Config          | Viper                   |
-| Infrastructure  | Docker Compose          |
+| Component      | Technology                    |
+|----------------|-------------------------------|
+| Language        | Go 1.25                       |
+| HTTP Framework  | Gin                           |
+| Database        | PostgreSQL 16 (pgx)           |
+| Cache           | Redis 7 (go-redis)            |
+| Rate Limiting   | redis_rate                    |
+| Auth            | JWT (HS256)                   |
+| Config          | Viper                         |
+| Logging         | log/slog (JSON)               |
+| Metrics         | Prometheus (client_golang)    |
+| Dashboards      | Grafana                       |
+| CI/CD           | GitHub Actions                |
+| Infrastructure  | Docker Compose                |
 
 ## Project Structure
 
@@ -39,7 +48,9 @@ url-shortener/
 │   ├── cache/                 # Redis cache layer for URL lookups
 │   ├── config/                # Environment config loading
 │   ├── handler/               # HTTP handlers (request/response)
-│   ├── middleware/             # Auth + rate limiting middleware
+│   ├── logger/                # Structured logging setup (log/slog, JSON output)
+│   ├── metrics/               # Prometheus metrics (HTTP, cache, analytics, DB pool)
+│   ├── middleware/             # Auth, rate limiting, and metrics middleware
 │   ├── model/                 # Domain models and errors
 │   ├── repository/            # Database queries
 │   ├── request/               # Validation, normalization, pagination
@@ -47,7 +58,12 @@ url-shortener/
 │   ├── service/               # Business logic
 │   ├── shortcode/             # Short code generation (crypto/rand + base62)
 │   └── token/                 # JWT creation and verification
+├── infra/
+│   ├── grafana/               # Grafana provisioning (dashboards + datasources)
+│   └── prometheus/            # Prometheus scrape config
 ├── migrations/                # PostgreSQL migrations
+├── .github/workflows/         # CI/CD pipeline
+├── Dockerfile                 # Multi-stage Docker build
 ├── docker-compose.yml
 ├── Makefile
 └── go.mod
@@ -106,6 +122,7 @@ The server starts on `http://localhost:8080` by default.
 | POST   | `/api/v1/shorten`       | Create short URL (works with or without auth)      |
 | POST   | `/api/v1/auth/register` | Register a new account                             |
 | POST   | `/api/v1/auth/login`    | Login and receive JWT                              |
+| GET    | `/health`               | Health check                                       |
 
 ### Protected (require JWT)
 
@@ -115,6 +132,13 @@ The server starts on `http://localhost:8080` by default.
 | GET    | `/api/v1/me/urls/:code`        | Get URL details              |
 | GET    | `/api/v1/me/urls/:code/stats`  | Get click analytics & stats  |
 | DELETE | `/api/v1/me/urls/:code`        | Soft delete a URL            |
+| GET    | `/api/v1/me/profile`           | Get user profile             |
+
+### Infrastructure
+
+| Method | Path                    | Description                                        |
+|--------|-------------------------|----------------------------------------------------|
+| GET    | `/metrics`              | Prometheus metrics endpoint                        |
 
 ### Example: Shorten a URL
 
@@ -122,13 +146,13 @@ The server starts on `http://localhost:8080` by default.
 # Anonymous
 curl -X POST http://localhost:8080/api/v1/shorten \
   -H "Content-Type: application/json" \
-  -d '{"originalUrl": "https://github.com/katatrina/url-shortener"}'
+  -d '{"longUrl": "https://github.com/katatrina/url-shortener"}'
 
 # With custom alias (authenticated)
 curl -X POST http://localhost:8080/api/v1/shorten \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <token>" \
-  -d '{"originalUrl": "https://github.com/katatrina/url-shortener", "customAlias": "myrepo"}'
+  -d '{"longUrl": "https://github.com/katatrina/url-shortener", "customAlias": "myrepo"}'
 ```
 
 ### Example: Register and Login
@@ -137,7 +161,7 @@ curl -X POST http://localhost:8080/api/v1/shorten \
 # Register
 curl -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"email": "alice@example.com", "displayName": "Alice", "password": "securepass123"}'
+  -d '{"email": "alice@example.com", "fullName": "Alice", "password": "securepass123"}'
 
 # Login
 curl -X POST http://localhost:8080/api/v1/auth/login \
@@ -157,7 +181,7 @@ All endpoints return a consistent JSON structure:
   "data": {
     "shortCode": "aB3kX9m",
     "shortUrl": "http://localhost:8080/aB3kX9m",
-    "originalUrl": "https://github.com/katatrina/url-shortener",
+    "longUrl": "https://github.com/katatrina/url-shortener",
     "clickCount": 0,
     "createdAt": 1718900000
   },
@@ -215,7 +239,7 @@ go test ./internal/service/ -v
 - [x] **Phase 1** — Core MVP: shorten, redirect, auth, CRUD, unit tests
 - [x] **Phase 2** — Redis caching + rate limiting
 - [x] **Phase 3** — Async analytics pipeline (goroutines + channels)
-- [ ] **Phase 4** — Observability + CI/CD (Prometheus, Grafana, GitHub Actions)
+- [x] **Phase 4** — Observability + CI/CD (Prometheus, Grafana, structured logging, GitHub Actions)
 - [ ] **Phase 5** — Microservices migration
 - [ ] **Phase 6** — Frontend + public deployment
 

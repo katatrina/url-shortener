@@ -41,7 +41,7 @@ func TestResolve_CacheHit(t *testing.T) {
 		Get(gomock.Any(), "abc1234").
 		Return(&cache.CachedURL{
 			ID:          "url-id-1",
-			OriginalURL: "https://example.com",
+			LongURL: "https://example.com",
 		}, nil)
 
 	collector.EXPECT().
@@ -64,7 +64,7 @@ func TestResolve_CacheHitExpired(t *testing.T) {
 		Get(gomock.Any(), "abc1234").
 		Return(&cache.CachedURL{
 			ID:          "url-id-1",
-			OriginalURL: "https://example.com",
+			LongURL: "https://example.com",
 			ExpiresAt:   &past,
 		}, nil)
 
@@ -86,7 +86,7 @@ func TestResolve_CacheMissThenDB(t *testing.T) {
 		Return(&model.URL{
 			ID:          "url-id-1",
 			ShortCode:   "abc1234",
-			OriginalURL: "https://example.com",
+			LongURL: "https://example.com",
 		}, nil)
 
 	urlCache.EXPECT().
@@ -117,7 +117,7 @@ func TestResolve_CacheErrorFallsBackToDB(t *testing.T) {
 		Return(&model.URL{
 			ID:          "url-id-1",
 			ShortCode:   "abc1234",
-			OriginalURL: "https://example.com",
+			LongURL: "https://example.com",
 		}, nil)
 
 	urlCache.EXPECT().
@@ -166,7 +166,7 @@ func TestResolve_DBURLExpired(t *testing.T) {
 		Return(&model.URL{
 			ID:          "url-id-1",
 			ShortCode:   "abc1234",
-			OriginalURL: "https://example.com",
+			LongURL: "https://example.com",
 			ExpiresAt:   &past,
 		}, nil)
 
@@ -188,7 +188,7 @@ func TestResolve_NilCache(t *testing.T) {
 		Return(&model.URL{
 			ID:          "url-id-1",
 			ShortCode:   "abc1234",
-			OriginalURL: "https://example.com",
+			LongURL: "https://example.com",
 		}, nil)
 
 	collector.EXPECT().

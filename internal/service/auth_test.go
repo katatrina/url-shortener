@@ -35,7 +35,7 @@ func TestLogin_HappyPath(t *testing.T) {
 		Return(&model.User{
 			ID:           "user-id-1",
 			Email:        "user@example.com",
-			DisplayName:  "Test User",
+			FullName:     "Test User",
 			PasswordHash: hashedPwd,
 		}, nil)
 

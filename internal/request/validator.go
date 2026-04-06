@@ -90,7 +90,7 @@ func mapValidationTag(tag string) FieldErrorCode {
 }
 
 // toCamelCase converts PascalCase to camelCase.
-// DisplayName -> displayName
+// FullName -> fullName
 // UserID -> userId (properly handles acronyms)
 func toCamelCase(s string) string {
 	if s == "" {

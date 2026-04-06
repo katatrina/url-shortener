@@ -11,13 +11,13 @@ import (
 
 func (r *URLRepository) Create(ctx context.Context, url model.URL) (*model.URL, error) {
 	query := `
-		INSERT INTO urls (id, short_code, original_url, user_id, click_count, expires_at, created_at, updated_at, deleted_at)
+		INSERT INTO urls (id, short_code, long_url, user_id, click_count, expires_at, created_at, updated_at, deleted_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		RETURNING id, short_code, original_url, user_id, click_count, expires_at, created_at, updated_at, deleted_at
+		RETURNING id, short_code, long_url, user_id, click_count, expires_at, created_at, updated_at, deleted_at
 	`
 
 	rows, _ := r.db.Query(ctx, query,
-		url.ID, url.ShortCode, url.OriginalURL, url.UserID,
+		url.ID, url.ShortCode, url.LongURL, url.UserID,
 		url.ClickCount, url.ExpiresAt, url.CreatedAt, url.UpdatedAt, url.DeletedAt,
 	)
 
@@ -35,10 +35,9 @@ func (r *URLRepository) Create(ctx context.Context, url model.URL) (*model.URL, 
 	return &created, nil
 }
 
-// FindByShortCode looks up a URL by its short code.
 func (r *URLRepository) FindByShortCode(ctx context.Context, shortCode string) (*model.URL, error) {
 	query := `
-		SELECT id, short_code, original_url, user_id, click_count, expires_at, created_at, updated_at, deleted_at
+		SELECT id, short_code, long_url, user_id, click_count, expires_at, created_at, updated_at, deleted_at
 		FROM urls
 		WHERE short_code = $1 AND deleted_at IS NULL
 	`
@@ -77,7 +76,7 @@ func (r *URLRepository) IncrementClickCount(ctx context.Context, id string) erro
 
 func (r *URLRepository) ListByUserID(ctx context.Context, userID string, limit, offset int) ([]model.URL, error) {
 	query := `
-		SELECT id, short_code, original_url, user_id, click_count, expires_at, created_at, updated_at, deleted_at
+		SELECT id, short_code, long_url, user_id, click_count, expires_at, created_at, updated_at, deleted_at
 		FROM urls
 		WHERE user_id = $1 AND deleted_at IS NULL
 		ORDER BY created_at DESC
@@ -124,7 +123,6 @@ func (r *URLRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-// ShortCodeExists checks if a short code is already in use.
 func (r *URLRepository) ShortCodeExists(ctx context.Context, shortCode string) (bool, error) {
 	query := `
 		SELECT EXISTS(SELECT 1 FROM urls WHERE short_code = $1 AND deleted_at IS NULL)

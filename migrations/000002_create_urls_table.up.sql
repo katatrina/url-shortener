@@ -2,18 +2,17 @@ BEGIN;
 
 CREATE TABLE urls
 (
-    id           UUID PRIMARY KEY,
-    short_code   TEXT        NOT NULL,
-    original_url TEXT        NOT NULL,
-    user_id      UUID REFERENCES users (id),
+    id          UUID PRIMARY KEY,
+    user_id     UUID        NOT NULL REFERENCES users (id),
+    long_url    TEXT        NOT NULL,
+    short_code  TEXT        NOT NULL,
 
-    click_count  BIGINT      NOT NULL DEFAULT 0,
+    click_count BIGINT      NOT NULL DEFAULT 0,
+    expires_at  TIMESTAMPTZ,
 
-    expires_at   TIMESTAMPTZ,
-
-    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at   TIMESTAMPTZ
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at  TIMESTAMP
 );
 
 CREATE UNIQUE INDEX urls_short_code_unique

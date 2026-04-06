@@ -43,7 +43,7 @@ func (s *Service) ShortenURL(ctx context.Context, params model.ShortenURLParams)
 	newURL := model.URL{
 		ID:          id.String(),
 		ShortCode:   code,
-		OriginalURL: params.OriginalURL,
+		LongURL: params.LongURL,
 		UserID:      params.UserID,
 		ClickCount:  0,
 		ExpiresAt:   params.ExpiresAt,

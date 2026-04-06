@@ -3,16 +3,16 @@ package model
 import "time"
 
 type ShortenURLParams struct {
-	OriginalURL string
-	CustomAlias string // optional: user-chosen short code
+	LongURL     string
+	CustomAlias string
 	UserID      *string
 	ExpiresAt   *time.Time
 }
 
 type CreateUserParams struct {
-	Email       string
-	DisplayName string
-	Password    string
+	Email    string
+	FullName string
+	Password string
 }
 
 type LoginUserParams struct {

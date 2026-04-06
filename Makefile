@@ -1,4 +1,4 @@
-.PHONY: migrate-up migrate-down server mockgen infra infra-down lint service-test
+.PHONY: migrate-up migrate-down server infra infra-down infra-stop lint
 
 include .env
 
@@ -20,8 +20,8 @@ infra:
 infra-down:
 	docker compose down
 
+infra-stop:
+	docker compose stop
+
 lint:
 	golangci-lint run
-
-service-test:
-	go test -v ./internal/service

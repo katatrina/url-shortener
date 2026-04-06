@@ -27,7 +27,7 @@ func (s *Service) Resolve(ctx context.Context, shortCode string, meta model.Clic
 				}
 
 				s.trackClick(cachedURL.ID, meta)
-				return cachedURL.OriginalURL, nil
+				return cachedURL.LongURL, nil
 			}
 			// Cache MISS — URL not in Redis, will query DB.
 			metrics.CacheRequests.WithLabelValues("miss").Inc()
@@ -46,7 +46,7 @@ func (s *Service) Resolve(ctx context.Context, shortCode string, meta model.Clic
 	if s.urlCache != nil {
 		cachedURL := &cache.CachedURL{
 			ID:          u.ID,
-			OriginalURL: u.OriginalURL,
+			LongURL: u.LongURL,
 		}
 		if u.ExpiresAt != nil {
 			ts := u.ExpiresAt.Unix()
@@ -60,7 +60,7 @@ func (s *Service) Resolve(ctx context.Context, shortCode string, meta model.Clic
 
 	s.trackClick(u.ID, meta)
 
-	return u.OriginalURL, nil
+	return u.LongURL, nil
 }
 
 func (s *Service) trackClick(urlID string, meta model.ClickMeta) {

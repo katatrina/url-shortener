@@ -13,10 +13,10 @@ type Config struct {
 	DatabaseURL string        `mapstructure:"DATABASE_URL"`
 	RedisURL    string        `mapstructure:"REDIS_URL"`
 	JWTSecret   string        `mapstructure:"JWT_SECRET"`
-	JWTExpiry   time.Duration `mapstructure:"JWT_EXPIRY"`
+	JWTTTL      time.Duration `mapstructure:"JWT_TTL"`
 }
 
-func (c *Config) Validate() error {
+func (c Config) Validate() error {
 	if c.ServerPort == "" {
 		return errors.New("SERVER_PORT is required")
 	}
@@ -45,7 +45,7 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	var cfg Config
-	if err := viper.Unmarshal(&cfg); err != nil {
+	if err := viper.UnmarshalExact(&cfg); err != nil {
 		return nil, err
 	}
 

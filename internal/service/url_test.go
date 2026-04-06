@@ -28,13 +28,13 @@ func TestShortenURL_HappyPath(t *testing.T) {
 		})
 
 	result, err := svc.ShortenURL(context.Background(), model.ShortenURLParams{
-		OriginalURL: "https://example.com/very-long-path",
+		LongURL: "https://example.com/very-long-path",
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if result.OriginalURL != "https://example.com/very-long-path" {
-		t.Fatalf("got original URL %q, want %q", result.OriginalURL, "https://example.com/very-long-path")
+	if result.LongURL != "https://example.com/very-long-path" {
+		t.Fatalf("got long URL %q, want %q", result.LongURL, "https://example.com/very-long-path")
 	}
 	if result.ShortCode == "" {
 		t.Fatal("expected non-empty short code")
@@ -60,7 +60,7 @@ func TestShortenURL_CustomAlias(t *testing.T) {
 		})
 
 	result, err := svc.ShortenURL(context.Background(), model.ShortenURLParams{
-		OriginalURL: "https://example.com",
+		LongURL: "https://example.com",
 		CustomAlias: "myalias",
 	})
 	if err != nil {
@@ -81,7 +81,7 @@ func TestShortenURL_CustomAliasTaken(t *testing.T) {
 		Return(true, nil)
 
 	_, err := svc.ShortenURL(context.Background(), model.ShortenURLParams{
-		OriginalURL: "https://example.com",
+		LongURL: "https://example.com",
 		CustomAlias: "taken",
 	})
 	if !errors.Is(err, model.ErrShortCodeTaken) {
@@ -108,7 +108,7 @@ func TestShortenURL_WithUserIDAndExpiry(t *testing.T) {
 	expiry := time.Now().Add(24 * time.Hour)
 
 	result, err := svc.ShortenURL(context.Background(), model.ShortenURLParams{
-		OriginalURL: "https://example.com",
+		LongURL: "https://example.com",
 		UserID:      &userID,
 		ExpiresAt:   &expiry,
 	})
@@ -142,7 +142,7 @@ func TestShortenURL_CollisionRetry(t *testing.T) {
 		})
 
 	result, err := svc.ShortenURL(context.Background(), model.ShortenURLParams{
-		OriginalURL: "https://example.com",
+		LongURL: "https://example.com",
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -164,7 +164,7 @@ func TestShortenURL_AllCollisionsExhausted(t *testing.T) {
 		Times(maxGenerateAttempts)
 
 	_, err := svc.ShortenURL(context.Background(), model.ShortenURLParams{
-		OriginalURL: "https://example.com",
+		LongURL: "https://example.com",
 	})
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -185,7 +185,7 @@ func TestShortenURL_CreateError(t *testing.T) {
 		Return(nil, errors.New("db connection lost"))
 
 	_, err := svc.ShortenURL(context.Background(), model.ShortenURLParams{
-		OriginalURL: "https://example.com",
+		LongURL: "https://example.com",
 	})
 	if err == nil {
 		t.Fatal("expected error, got nil")

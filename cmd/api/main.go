@@ -89,11 +89,7 @@ func main() {
 	slog.Info("connected to Redis")
 
 	// ---- Dependencies ----
-	tokenMaker, err := token.NewJWTMaker([]byte(cfg.JWTSecret), cfg.JWTExpiry)
-	if err != nil {
-		slog.Error("failed to create token maker", "error", err)
-		os.Exit(1)
-	}
+	tokenMaker := token.NewJWTMaker(cfg.JWTSecret, cfg.JWTTTL)
 
 	rateLimiter := redis_rate.NewLimiter(rdb)
 

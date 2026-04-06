@@ -19,7 +19,7 @@ func (h *Handler) Register(c *gin.Context) {
 
 	user, err := h.service.Register(c.Request.Context(), model.CreateUserParams{
 		Email:       req.Email,
-		DisplayName: req.DisplayName,
+		FullName:    req.FullName,
 		Password:    req.Password,
 	})
 	if err != nil {

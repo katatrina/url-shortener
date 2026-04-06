@@ -18,8 +18,8 @@ const (
 // CachedURL contains only the fields needed for redirect.
 // This is what gets stored in Redis - keep it minimal.
 type CachedURL struct {
-	ID          string `json:"id"`
-	OriginalURL string `json:"originalUrl"`
+	ID      string `json:"id"`
+	LongURL string `json:"longUrl"`
 
 	// Pointer (*int64): nil means "no expiry", distinguishing it from zero value.
 	// Unix timestamp: compact and timezone-safe compared to time.Time string.

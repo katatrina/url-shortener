@@ -26,7 +26,7 @@ func (s *Service) Register(ctx context.Context, params model.CreateUserParams) (
 	user := model.User{
 		ID:           userID.String(),
 		Email:        params.Email,
-		DisplayName:  params.DisplayName,
+		FullName:     params.FullName,
 		PasswordHash: string(hashedPassword),
 		CreatedAt:    now,
 		UpdatedAt:    now,

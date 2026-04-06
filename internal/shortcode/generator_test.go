@@ -1,6 +1,8 @@
 package shortcode
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestGenerate(t *testing.T) {
 	code := Generate()
@@ -16,31 +18,31 @@ func TestGenerate(t *testing.T) {
 
 func TestGenerateWithLength(t *testing.T) {
 	tests := []struct {
-		name   string
-		length int
+		name           string
+		inputLength    int
+		expectedLength int
 	}{
-		{"length 5", 5},
-		{"length 7", 7},
-		{"length 10", 10},
+		{"length -1", -1, 7},
+		{"length 0", 0, 7},
+		{"length 5", 5, 5},
+		{"length 7", 7, 7},
+		{"length 10", 10, 10},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			code := GenerateWithLength(tt.length)
+			code := GenerateWithLength(tt.inputLength)
 
-			if len(code) != tt.length {
-				t.Errorf("expected length %d, got %d", tt.length, len(code))
+			if len(code) != tt.expectedLength {
+				t.Errorf("expected length %d, got %d", tt.expectedLength, len(code))
 			}
 		})
 	}
 }
 
 func TestGenerate_Uniqueness(t *testing.T) {
-	// Generate 1000 codes and verify no duplicates.
-	// With 62^7 ≈ 3.5 trillion combinations, collision in 1000 codes
-	// would indicate a broken random source.
 	seen := make(map[string]bool)
-	count := 1000
+	count := 1000000
 
 	for range count {
 		code := Generate()
@@ -48,15 +50,16 @@ func TestGenerate_Uniqueness(t *testing.T) {
 		if seen[code] {
 			t.Fatalf("duplicate code generated: %s", code)
 		}
+
 		seen[code] = true
 	}
 }
 
 func TestIsValid(t *testing.T) {
 	tests := []struct {
-		name  string
-		code  string
-		valid bool
+		name     string
+		code     string
+		expected bool
 	}{
 		{"valid lowercase", "abcdefg", true},
 		{"valid uppercase", "ABCDEFG", true},
@@ -70,11 +73,10 @@ func TestIsValid(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := IsValid(tt.code)
-			if got != tt.valid {
-				t.Errorf("IsValid(%q) = %v, want %v", tt.code, got, tt.valid)
-			}
-		})
+		got := IsValid(tt.code)
+
+		if got != tt.expected {
+			t.Errorf("IsValid(%q) = %v, expected %v", tt.code, got, tt.expected)
+		}
 	}
 }

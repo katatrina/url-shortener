@@ -6,8 +6,8 @@ CREATE TABLE click_events
     url_id     UUID        NOT NULL REFERENCES urls (id),
 
     ip_address INET,
-    user_agent TEXT,
     referer    TEXT,
+    user_agent TEXT,
     country    TEXT,
 
     clicked_at TIMESTAMPTZ NOT NULL
