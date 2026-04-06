@@ -1,0 +1,12 @@
+# Auto-provision Loki datasource — Grafana tự biết query Loki ở đâu
+# Tương tự như prometheus.yml đã có, nhưng cho logs.
+apiVersion: 1
+
+datasources:
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    # isDefault: false — Prometheus vẫn là default cho dashboards hiện có
+    isDefault: false
+    editable: false

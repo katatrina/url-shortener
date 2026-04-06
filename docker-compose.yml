@@ -9,11 +9,21 @@ services:
       POSTGRES_DB: url_shortener
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d url_shortener"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
 
   # ---- Observability Stack ----
 
@@ -22,39 +32,98 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      # Mount our config file into the container.
-      # Prometheus reads this at startup to know what to scrape.
       - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      # Named volume for Prometheus data persistence.
-      # Without this, all historical metrics are lost when the container restarts.
       - prometheus_data:/prometheus
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+  # Loki — log storage & query engine
+  # Vai trò giống Prometheus nhưng cho logs:
+  #   Prometheus: store metrics, query bằng PromQL
+  #   Loki:       store logs, query bằng LogQL
+  loki:
+    image: grafana/loki:3.5.0
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki_data:/loki
+    # Config mặc định đủ cho development.
+    # Production cần tune: retention period, storage backend (S3),
+    # compaction, limits, etc.
+
+  # Alloy — log collector (thế hệ mới thay Promtail)
+  # Nó "ngồi" trên Docker socket, tự phát hiện containers,
+  # đọc stdout/stderr logs, parse JSON, rồi push sang Loki.
+  alloy:
+    image: grafana/alloy:latest
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy
+      # Alloy cần Docker socket để discover containers
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Alloy cần đọc container log files trên host
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --stability.level=generally-available
+    depends_on:
+      - loki
+    # Alloy KHÔNG cần expose port — chỉ giao tiếp nội bộ với Loki
 
   grafana:
     image: grafana/grafana:11.6.0
     ports:
       - "3000:3000"
     environment:
-      # Default admin credentials for development.
-      # In production, use secrets management (Docker secrets, Vault, etc).
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
-      # Disable login page for dev convenience — auto-login as admin.
-      # NEVER do this in production.
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
     volumes:
-      # Provisioning: Grafana can auto-configure datasources and dashboards
-      # from YAML files at startup. This means you don't have to manually
-      # click through the UI to add Prometheus as a datasource every time
-      # you recreate the container. Infrastructure as Code, baby.
       - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
       - grafana_data:/var/lib/grafana
     depends_on:
       - prometheus
+      - loki
+
+  migrator:
+    image: migrate/migrate:v4.18.2
+    command: ["-path", "/migrations", "-database", "postgres://root:secret@postgres:5432/url_shortener?sslmode=disable", "up"]
+    volumes:
+      - ./migrations:/migrations:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  app:
+    build: .
+    restart: on-failure
+    environment:
+      - APP_ENV=production
+      - SERVER_PORT=8080
+      - BASE_URL=http://localhost:8080
+      - DATABASE_URL=postgres://root:secret@postgres:5432/url_shortener?sslmode=disable
+      - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET=dev-secret-key-at-least-32-bytes-long!!
+      - JWT_TTL=24h
+    labels:
+      # Label này là "cầu nối" giữa Docker container và Alloy config
+      # Alloy đọc label này (qua __meta_docker_container_label_app)
+      # và gắn vào mọi log line → Loki query: {app="url-shortener"}
+      - "app=url-shortener"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
 
 volumes:
   postgres_data:
   prometheus_data:
   grafana_data:
+  loki_data:

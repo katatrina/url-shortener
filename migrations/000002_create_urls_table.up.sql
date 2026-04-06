@@ -3,7 +3,7 @@ BEGIN;
 CREATE TABLE urls
 (
     id          UUID PRIMARY KEY,
-    user_id     UUID        NOT NULL REFERENCES users (id),
+    user_id     UUID REFERENCES users (id),
     long_url    TEXT        NOT NULL,
     short_code  TEXT        NOT NULL,
 

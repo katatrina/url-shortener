@@ -1,0 +1,95 @@
+// =================================================================
+// Grafana Alloy — Log collector cho url-shortener
+// =================================================================
+// Alloy thay thế Promtail (đã deprecated). Nó đọc logs từ Docker
+// containers và push sang Loki.
+//
+// Flow: Docker containers → Alloy discover → parse JSON → push Loki
+
+// -----------------------------------------------------------------
+// Bước 1: Docker Discovery
+// -----------------------------------------------------------------
+// Alloy kết nối Docker socket để tự phát hiện containers đang chạy.
+// Khi bạn scale app (docker compose up --scale app=3), Alloy tự biết
+// có 3 containers mới → scrape logs từ cả 3 mà không cần config thêm.
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+// -----------------------------------------------------------------
+// Bước 2: Relabel — chọn container nào cần collect, gắn labels
+// -----------------------------------------------------------------
+// Labels trong Loki giống như index trong database — Loki KHÔNG index
+// nội dung log, chỉ index labels. Chọn labels đúng = query nhanh.
+discovery.relabel "docker_logs" {
+  targets = discovery.docker.containers.targets
+
+  // Lấy container name làm label
+  // Khi scale app=3, mỗi replica có tên khác nhau (app-1, app-2, app-3)
+  // → bạn filter được log theo từng replica
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    target_label  = "container"
+  }
+
+  // Lấy label "app" từ Docker container labels
+  // Đây là label set trong docker-compose.yml: labels: ["app=url-shortener"]
+  // Dùng để filter: {app="url-shortener"} — bỏ qua logs từ loki, grafana, etc.
+  rule {
+    source_labels = ["__meta_docker_container_label_app"]
+    target_label  = "app"
+  }
+}
+
+// -----------------------------------------------------------------
+// Bước 3: Đọc logs từ Docker containers
+// -----------------------------------------------------------------
+loki.source.docker "docker_logs" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.docker_logs.output
+  forward_to = [loki.process.json_logs.receiver]
+}
+
+// -----------------------------------------------------------------
+// Bước 4: Parse JSON logs → extract fields thành labels
+// -----------------------------------------------------------------
+// Đây là chỗ structured logging phát huy sức mạnh.
+// App output: {"level":"error","request_id":"abc-123","msg":"cache failed",...}
+// Alloy parse JSON → extract "level" → promote thành label
+// → Loki query: {app="url-shortener", level="error"}
+loki.process "json_logs" {
+  forward_to = [loki.write.loki.receiver]
+
+  // Parse JSON — mỗi field trong JSON log trở thành extracted value
+  stage.json {
+    expressions = {
+      level      = "level",
+      msg        = "msg",
+      request_id = "request_id",
+    }
+  }
+
+  // CHỈ promote "level" lên label — cardinality thấp (debug/info/warn/error)
+  //
+  // KHÔNG promote request_id lên label!
+  // request_id có cardinality cực cao (mỗi request 1 ID khác nhau)
+  // → hàng triệu label values → Loki's index phình to → OOM → chết
+  //
+  // request_id vẫn nằm trong log content, bạn query bằng:
+  //   {app="url-shortener"} | json | request_id="abc-123"
+  // Chậm hơn label filter một chút, nhưng an toàn cho Loki.
+  stage.labels {
+    values = {
+      level = "",
+    }
+  }
+}
+
+// -----------------------------------------------------------------
+// Bước 5: Push logs sang Loki
+// -----------------------------------------------------------------
+loki.write "loki" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

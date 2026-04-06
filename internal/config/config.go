@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"log/slog"
 	"time"
 
 	"github.com/spf13/viper"
@@ -42,15 +43,20 @@ func (c Config) Validate() error {
 
 func LoadConfig(path string) (*Config, error) {
 	viper.AutomaticEnv()
-	viper.SetConfigFile(path)
 
-	if err := viper.ReadInConfig(); err != nil {
-		return nil, err
+	// .env file là optional — chỉ dùng cho local dev
+	// Production dùng env vars (từ Docker, K8s, systemd,...)
+	if path != "" {
+		viper.SetConfigFile(path)
+		if err := viper.ReadInConfig(); err != nil {
+			// Không có file .env thì không sao — env vars vẫn hoạt động
+			slog.Info("no .env file found, using environment variables only",
+				"path", path)
+		}
 	}
 
 	var cfg Config
-	if err := viper.UnmarshalExact(&cfg); err != nil {
-
+	if err := viper.Unmarshal(&cfg); err != nil {
 		return nil, err
 	}
 
