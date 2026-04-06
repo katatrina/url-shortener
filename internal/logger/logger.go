@@ -1,36 +1,46 @@
 package logger
 
 import (
+	"context"
 	"log/slog"
 	"os"
+
+	"github.com/rs/zerolog"
 )
 
-// Setup configures the global slog logger.
-//
-// JSON format is chosen for production readiness:
-//   - Machine-parseable (Loki, ELK, CloudWatch can ingest directly)
-//   - Structured fields enable precise querying
-//   - Consistent format across all log entries
-//
-// For development, you could use slog.NewTextHandler instead for
-// human-readable output. We'll use JSON from the start so you
-// get used to reading it — and it's what production will use anyway.
-func Setup() {
-	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		// AddSource adds file:line to every log entry.
-		// Extremely helpful for debugging ("which log.Printf was this?")
-		// but adds ~10% overhead. Enable in dev, consider disabling in prod.
-		AddSource: true,
+// Setup configs slog global logger with zerolog backend.
+func Setup(env string) {
+	var zl zerolog.Logger
 
-		// Level controls what gets logged.
-		// DEBUG: very verbose, includes batch flush counts, cache operations
-		// INFO:  normal operations, startup/shutdown
-		// WARN:  recoverable issues (cache miss fallback, rate limit hit)
-		// ERROR: things that need human attention
-		//
-		// In dev, use DEBUG. In production, INFO or WARN.
-		Level: slog.LevelDebug,
-	})
+	switch env {
+	case "production":
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+		zl = zerolog.New(os.Stdout).With().Timestamp().Logger()
+	default:
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		zl = zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).
+			With().Timestamp().Logger()
+	}
 
+	handler := NewZerologHandler(zl, true)
 	slog.SetDefault(slog.New(handler))
+}
+
+type ctxKey string
+
+const loggerKey ctxKey = "slog_logger"
+
+// WithContext .
+func WithContext(ctx context.Context, l *slog.Logger) context.Context {
+	return context.WithValue(ctx, loggerKey, l)
+}
+
+// FromContext retrieves the logger from context.
+// It returns slog.Default() if not found - never panic.
+// This is important: code shouldn't crash just because of a missing logger.
+func FromContext(ctx context.Context) *slog.Logger {
+	if l, ok := ctx.Value(loggerKey).(*slog.Logger); ok {
+		return l
+	}
+	return slog.Default()
 }
