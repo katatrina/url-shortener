@@ -2,7 +2,7 @@ package handler
 
 import (
 	"errors"
-	"log/slog"
+	"github.com/katatrina/url-shortener/internal/logger"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -12,6 +12,7 @@ import (
 )
 
 func (h *Handler) Redirect(c *gin.Context) {
+	log := logger.FromContext(c.Request.Context())
 	shortCode := c.Param("code")
 
 	if !shortcode.IsValid(shortCode) {
@@ -31,7 +32,7 @@ func (h *Handler) Redirect(c *gin.Context) {
 		case errors.Is(err, model.ErrURLExpired):
 			response.Gone(c, response.CodeURLExpired, "This short URL has expired")
 		default:
-			slog.Error("failed to resolve short URL", "error", err)
+			log.Error("failed to resolve short URL", "error", err)
 			response.InternalServerError(c)
 		}
 		return

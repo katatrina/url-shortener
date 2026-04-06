@@ -31,7 +31,13 @@ import (
 )
 
 func main() {
-	logger.Setup()
+	// Đọc APP_ENV TRƯỚC khi load config
+	// Vì nếu config loading fail, ta cần logger đã sẵn sàng để log lỗi
+	env := os.Getenv("APP_ENV")
+	if env == "" {
+		env = "development"
+	}
+	logger.Setup(env)
 
 	cfg, err := config.LoadConfig(".env")
 	if err != nil {
@@ -110,11 +116,19 @@ func main() {
 	h := handler.New(svc, cfg.BaseURL)
 
 	// ---- Router ----
-	router := gin.Default()
+	gin.SetMode(gin.ReleaseMode)
+	router := gin.New()
 
-	// Metrics middleware must be FIRST so it captures ALL requests,
-	// including those rejected by auth or rate limiting.
+	// Order of importance for middleware — read from top to bottom:
+	// 1. Metrics: measures all requests (even those rejected by subsequent middleware)
+	// 2. RequestID: creates an ID, attaches it to the context — all later logs will have the ID
+	// 3. Logging: logs the start/end request with the request_id
+	// 4. Recovery: catches panic, prevents server crashes
+	// 5. CORS: handles cross-origin
 	router.Use(middleware.Metrics())
+	router.Use(middleware.RequestID())
+	router.Use(middleware.Logging())
+	router.Use(gin.Recovery())
 
 	// CORS must be before any route handlers.
 	// In production, replace AllowOrigins with your actual frontend domain.

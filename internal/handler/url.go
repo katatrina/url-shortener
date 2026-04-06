@@ -2,7 +2,7 @@ package handler
 
 import (
 	"errors"
-	"log/slog"
+	"github.com/katatrina/url-shortener/internal/logger"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -13,6 +13,7 @@ import (
 )
 
 func (h *Handler) ShortenURL(c *gin.Context) {
+	log := logger.FromContext(c.Request.Context())
 	var req ShortenURLRequest
 	if err := request.ShouldBindJSON(c, &req); err != nil {
 		response.HandleJSONBindingError(c, err)
@@ -36,7 +37,7 @@ func (h *Handler) ShortenURL(c *gin.Context) {
 		case errors.Is(err, model.ErrShortCodeTaken):
 			response.Conflict(c, response.CodeShortCodeTaken, "Custom alias is already taken")
 		default:
-			slog.Error("failed to shorten URL", "error", err)
+			log.Error("failed to shorten URL", "error", err)
 			response.InternalServerError(c)
 		}
 		return
@@ -46,12 +47,13 @@ func (h *Handler) ShortenURL(c *gin.Context) {
 }
 
 func (h *Handler) ListUserURLs(c *gin.Context) {
+	log := logger.FromContext(c.Request.Context())
 	userID := middleware.MustGetAuthUserID(c)
 	pagination := request.ParsePaginationParams(c)
 
 	urls, total, err := h.service.ListUserURLs(c.Request.Context(), userID, pagination.Limit(), pagination.Offset())
 	if err != nil {
-		slog.Error("failed to list user URLs", "error", err)
+		log.Error("failed to list user URLs", "error", err)
 		response.InternalServerError(c)
 		return
 	}
@@ -65,6 +67,7 @@ func (h *Handler) ListUserURLs(c *gin.Context) {
 }
 
 func (h *Handler) GetUserURL(c *gin.Context) {
+	log := logger.FromContext(c.Request.Context())
 	userID := middleware.MustGetAuthUserID(c)
 	shortCode := c.Param("code")
 
@@ -75,7 +78,7 @@ func (h *Handler) GetUserURL(c *gin.Context) {
 			errors.Is(err, model.ErrURLOwnerMismatch):
 			response.NotFound(c, response.CodeURLNotFound, "URL not found")
 		default:
-			slog.Error("failed to get URL", "error", err)
+			log.Error("failed to get URL", "error", err)
 			response.InternalServerError(c)
 		}
 		return
@@ -85,6 +88,7 @@ func (h *Handler) GetUserURL(c *gin.Context) {
 }
 
 func (h *Handler) DeleteUserURL(c *gin.Context) {
+	log := logger.FromContext(c.Request.Context())
 	userID := middleware.MustGetAuthUserID(c)
 	shortCode := c.Param("code")
 
@@ -95,7 +99,7 @@ func (h *Handler) DeleteUserURL(c *gin.Context) {
 			errors.Is(err, model.ErrURLOwnerMismatch):
 			response.NotFound(c, response.CodeURLNotFound, "URL not found")
 		default:
-			slog.Error("failed to delete URL", "error", err)
+			log.Error("failed to delete URL", "error", err)
 			response.InternalServerError(c)
 		}
 		return

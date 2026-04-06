@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
-	"log/slog"
+	"github.com/katatrina/url-shortener/internal/logger"
 	"time"
 
 	"github.com/google/uuid"
@@ -108,6 +108,7 @@ func (s *Service) ListUserURLs(ctx context.Context, userID string, limit, offset
 }
 
 func (s *Service) DeleteUserURL(ctx context.Context, shortCode, userID string) error {
+	log := logger.FromContext(ctx)
 	u, err := s.urlRepo.FindByShortCode(ctx, shortCode)
 	if err != nil {
 		return err
@@ -126,7 +127,7 @@ func (s *Service) DeleteUserURL(ctx context.Context, shortCode, userID string) e
 	// Worst case: cache delete fails, stale cache remains but will be auto-evicted by TTL.
 	if s.urlCache != nil {
 		if err := s.urlCache.Delete(ctx, shortCode); err != nil {
-			slog.Warn("cache delete failed", "short_code", shortCode, "error", err)
+			log.Warn("cache delete failed", "short_code", shortCode, "error", err)
 		}
 	}
 

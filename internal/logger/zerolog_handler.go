@@ -3,6 +3,7 @@ package logger
 import (
 	"context"
 	"log/slog"
+	"path/filepath"
 	"runtime"
 	"strconv"
 
@@ -32,7 +33,7 @@ func (h *ZerologHandler) Handle(_ context.Context, record slog.Record) error {
 		if record.PC != 0 {
 			frames := runtime.CallersFrames([]uintptr{record.PC})
 			f, _ := frames.Next()
-			event = event.Str("source", f.File+":"+strconv.Itoa(f.Line))
+			event = event.Str("source", filepath.Base(f.File)+":"+strconv.Itoa(f.Line))
 		}
 	}
 
@@ -99,7 +100,11 @@ func (h *ZerologHandler) addAttr(event *zerolog.Event, attr slog.Attr) *zerolog.
 		}
 		return event
 	default:
-		return event.Interface(key, val.Any())
+		v := val.Any()
+		if err, ok := v.(error); ok {
+			return event.AnErr(key, err)
+		}
+		return event.Interface(key, v)
 	}
 }
 

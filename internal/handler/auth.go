@@ -2,7 +2,7 @@ package handler
 
 import (
 	"errors"
-	"log/slog"
+	"github.com/katatrina/url-shortener/internal/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/katatrina/url-shortener/internal/model"
@@ -11,6 +11,7 @@ import (
 )
 
 func (h *Handler) Register(c *gin.Context) {
+	log := logger.FromContext(c.Request.Context())
 	var req RegisterRequest
 	if err := request.ShouldBindJSON(c, &req); err != nil {
 		response.HandleJSONBindingError(c, err)
@@ -27,7 +28,7 @@ func (h *Handler) Register(c *gin.Context) {
 		case errors.Is(err, model.ErrEmailAlreadyExists):
 			response.Conflict(c, response.CodeEmailAlreadyExists, "Email already exists")
 		default:
-			slog.Error("failed to register user", "error", err)
+			log.Error("failed to register user", "error", err)
 			response.InternalServerError(c)
 		}
 		return
@@ -37,6 +38,7 @@ func (h *Handler) Register(c *gin.Context) {
 }
 
 func (h *Handler) Login(c *gin.Context) {
+	log := logger.FromContext(c.Request.Context())
 	var req LoginRequest
 	if err := request.ShouldBindJSON(c, &req); err != nil {
 		response.HandleJSONBindingError(c, err)
@@ -52,7 +54,7 @@ func (h *Handler) Login(c *gin.Context) {
 		case errors.Is(err, model.ErrIncorrectCredentials):
 			response.Unauthorized(c, response.CodeCredentialsInvalid, "Incorrect email or password")
 		default:
-			slog.Error("failed to login", "error", err)
+			log.Error("failed to login", "error", err)
 			response.InternalServerError(c)
 		}
 		return

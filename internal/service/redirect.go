@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"log/slog"
+	"github.com/katatrina/url-shortener/internal/logger"
 	"time"
 
 	"github.com/katatrina/url-shortener/internal/cache"
@@ -11,12 +11,13 @@ import (
 )
 
 func (s *Service) Resolve(ctx context.Context, shortCode string, meta model.ClickMeta) (string, error) {
+	log := logger.FromContext(ctx)
 	if s.urlCache != nil {
 		cachedURL, err := s.urlCache.Get(ctx, shortCode)
 		if err != nil {
 			// Redis error — not a miss, it's an infrastructure failure.
 			metrics.CacheErrors.Inc()
-			slog.Warn("cache get failed", "short_code", shortCode, "error", err)
+			log.Warn("cache get failed", "short_code", shortCode, "error", err)
 		} else {
 			if cachedURL != nil {
 				// Cache HIT — URL found in Redis.
@@ -54,7 +55,7 @@ func (s *Service) Resolve(ctx context.Context, shortCode string, meta model.Clic
 		}
 
 		if err := s.urlCache.Set(ctx, shortCode, cachedURL); err != nil {
-			slog.Warn("cache set failed", "short_code", shortCode, "error", err)
+			log.Warn("cache set failed", "short_code", shortCode, "error", err)
 		}
 	}
 

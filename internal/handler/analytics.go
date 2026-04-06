@@ -2,7 +2,7 @@ package handler
 
 import (
 	"errors"
-	"log/slog"
+	"github.com/katatrina/url-shortener/internal/logger"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -12,6 +12,7 @@ import (
 )
 
 func (h *Handler) GetURLStats(c *gin.Context) {
+	log := logger.FromContext(c.Request.Context())
 	userID := middleware.MustGetAuthUserID(c)
 	shortCode := c.Param("code")
 	days, _ := strconv.Atoi(c.DefaultQuery("days", "30"))
@@ -35,7 +36,7 @@ func (h *Handler) GetURLStats(c *gin.Context) {
 			errors.Is(err, model.ErrURLOwnerMismatch):
 			response.NotFound(c, response.CodeURLNotFound, "URL not found")
 		default:
-			slog.Error("failed to get URL stats", "error", err)
+			log.Error("failed to get URL stats", "error", err)
 			response.InternalServerError(c)
 		}
 		return

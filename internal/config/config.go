@@ -8,6 +8,7 @@ import (
 )
 
 type Config struct {
+	AppEnv      string        `mapstructure:"APP_ENV"`
 	ServerPort  string        `mapstructure:"SERVER_PORT"`
 	BaseURL     string        `mapstructure:"BASE_URL"`
 	DatabaseURL string        `mapstructure:"DATABASE_URL"`
@@ -17,6 +18,9 @@ type Config struct {
 }
 
 func (c Config) Validate() error {
+	if c.AppEnv == "" {
+		return errors.New("APP_ENV is required")
+	}
 	if c.ServerPort == "" {
 		return errors.New("SERVER_PORT is required")
 	}
@@ -46,6 +50,7 @@ func LoadConfig(path string) (*Config, error) {
 
 	var cfg Config
 	if err := viper.UnmarshalExact(&cfg); err != nil {
+
 		return nil, err
 	}
 
