@@ -3,6 +3,8 @@ package config
 import (
 	"errors"
 	"log/slog"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -16,6 +18,7 @@ type Config struct {
 	RedisURL    string        `mapstructure:"REDIS_URL"`
 	JWTSecret   string        `mapstructure:"JWT_SECRET"`
 	JWTTTL      time.Duration `mapstructure:"JWT_TTL"`
+	CORSOrigins []string      `mapstructure:"CORS_ORIGINS"`
 }
 
 func (c Config) Validate() error {
@@ -58,6 +61,12 @@ func LoadConfig(path string) (*Config, error) {
 	var cfg Config
 	if err := viper.Unmarshal(&cfg); err != nil {
 		return nil, err
+	}
+
+	// Viper không tự split chuỗi comma-separated thành []string.
+	// Parse thủ công từ env var.
+	if origins := os.Getenv("CORS_ORIGINS"); origins != "" {
+		cfg.CORSOrigins = strings.Split(origins, ",")
 	}
 
 	if err := cfg.Validate(); err != nil {

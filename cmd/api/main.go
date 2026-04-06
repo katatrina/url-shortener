@@ -131,9 +131,10 @@ func main() {
 	router.Use(gin.Recovery())
 
 	// CORS must be before any route handlers.
-	// In production, replace AllowOrigins with your actual frontend domain.
+	// AllowOrigins is loaded from CORS_ORIGINS env var (comma-separated).
+	// Example: CORS_ORIGINS=https://myapp.com,https://staging.myapp.com
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173"}, // Vite dev server
+		AllowOrigins:     cfg.CORSOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"RateLimit-Limit", "RateLimit-Remaining", "RateLimit-Reset", "Retry-After"},
@@ -158,6 +159,39 @@ func main() {
 	//   2. By convention, /metrics is the standard path Prometheus expects
 	//   3. It should NOT go through auth or rate limiting middleware
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
+	// Liveness: "process có đang chạy không?"
+	// K8s/Docker dùng cái này để quyết định có restart container không.
+	// Chỉ cần return 200 — nếu process treo thì tự khắc không respond.
+	router.GET("/healthz", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
+	// Readiness: "app có sẵn sàng nhận traffic không?"
+	// K8s/load balancer dùng cái này để quyết định có route traffic không.
+	// Check tất cả dependencies: DB, Redis.
+	router.GET("/readyz", func(c *gin.Context) {
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+		defer cancel()
+
+		if err := db.Ping(ctx); err != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"status": "not ready",
+				"reason": "database unavailable",
+			})
+			return
+		}
+
+		if err := rdb.Ping(ctx).Err(); err != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"status": "not ready",
+				"reason": "redis unavailable",
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"status": "ready"})
+	})
 
 	router.GET("/:code", h.Redirect)
 
@@ -187,9 +221,7 @@ func main() {
 		}
 	}
 
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
-	})
+
 
 	// ---- Start Server ----
 	//

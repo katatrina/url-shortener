@@ -77,6 +77,9 @@ COPY --from=builder /app/server .
 
 EXPOSE 8080
 
+HEALTHCHECK --interval=10s --timeout=3s --retries=3 \
+  CMD wget -qO- http://localhost:8080/readyz || exit 1
+
 # Use exec form (JSON array) instead of shell form.
 # Shell form: CMD server        → runs as /bin/sh -c server
 # Exec form:  CMD ["./server"]  → runs the binary directly
