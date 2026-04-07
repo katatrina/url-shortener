@@ -4,14 +4,20 @@ import (
 	"errors"
 	"log/slog"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/spf13/viper"
 )
 
+type Environment string
+
+const (
+	EnvLocal      Environment = "local"
+	EnvProduction Environment = "production"
+)
+
 type Config struct {
-	AppEnv      string        `mapstructure:"APP_ENV"`
+	AppEnv      Environment   `mapstructure:"APP_ENV"`
 	ServerPort  string        `mapstructure:"SERVER_PORT"`
 	BaseURL     string        `mapstructure:"BASE_URL"`
 	DatabaseURL string        `mapstructure:"DATABASE_URL"`
@@ -47,26 +53,43 @@ func (c Config) Validate() error {
 func LoadConfig(path string) (*Config, error) {
 	viper.AutomaticEnv()
 
+	// BindEnv "đăng ký" từng key với Viper để nó biết cần đọc env var nào.
+	//
+	// Tại sao cần BindEnv khi đã có AutomaticEnv?
+	//   AutomaticEnv() chỉ hoạt động với viper.Get("KEY") — gọi trực tiếp.
+	//   Unmarshal() chỉ unmarshal những key mà Viper đã "biết" (từ file config,
+	//   SetDefault, hoặc BindEnv). Nếu không có file .env (production), Viper
+	//   không biết key nào tồn tại → Unmarshal ra struct rỗng.
+	//
+	// Local dev (có .env): Viper đọc file → biết tất cả keys → Unmarshal OK.
+	// Docker/K8s (không có .env): Không có BindEnv → Viper không biết keys → fail.
+	viper.BindEnv("APP_ENV")
+	viper.BindEnv("SERVER_PORT")
+	viper.BindEnv("BASE_URL")
+	viper.BindEnv("DATABASE_URL")
+	viper.BindEnv("REDIS_URL")
+	viper.BindEnv("JWT_SECRET")
+	viper.BindEnv("JWT_TTL")
+	viper.BindEnv("CORS_ORIGINS")
+
 	// .env file là optional — chỉ dùng cho local dev
 	// Production dùng env vars (từ Docker, K8s, systemd,...)
 	if path != "" {
 		viper.SetConfigFile(path)
 		if err := viper.ReadInConfig(); err != nil {
-			// Không có file .env thì không sao — env vars vẫn hoạt động
-			slog.Info("no .env file found, using environment variables only",
-				"path", path)
+			if errors.Is(err, os.ErrNotExist) {
+				// Không có file .env thì không sao — env vars vẫn hoạt động
+				slog.Info("no .env file found, using environment variables only", "path", path)
+			} else {
+				// File .env tồn tại nhưng sai format (syntax error) -> văng lỗi để dev biết
+				return nil, err
+			}
 		}
 	}
 
 	var cfg Config
 	if err := viper.Unmarshal(&cfg); err != nil {
 		return nil, err
-	}
-
-	// Viper không tự split chuỗi comma-separated thành []string.
-	// Parse thủ công từ env var.
-	if origins := os.Getenv("CORS_ORIGINS"); origins != "" {
-		cfg.CORSOrigins = strings.Split(origins, ",")
 	}
 
 	if err := cfg.Validate(); err != nil {

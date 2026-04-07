@@ -79,7 +79,7 @@ func (c *ClickCollector) Stop() {
 }
 
 // Track queues a click event for async processing.
-// This is called from the redirect handler on every click.
+// This is called from the Redirect service method on every click.
 //
 // Non-blocking: if the channel is full, the event is dropped rather than
 // blocking the HTTP response. This is a deliberate trade-off:
@@ -98,6 +98,7 @@ func (c *ClickCollector) Track(urlID string, meta model.ClickMeta) {
 		IP:        toNullable(meta.IP),
 		UserAgent: toNullable(meta.UserAgent),
 		Referer:   toNullable(meta.Referer),
+		Country:   nil,
 		ClickedAt: time.Now(),
 	}
 

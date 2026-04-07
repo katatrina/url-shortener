@@ -31,15 +31,19 @@ import (
 )
 
 func main() {
-	// Đọc APP_ENV TRƯỚC khi load config
-	// Vì nếu config loading fail, ta cần logger đã sẵn sàng để log lỗi
-	env := os.Getenv("APP_ENV")
-	if env == "" {
-		env = "development"
+	envStr := os.Getenv("APP_ENV")
+	if envStr == "" {
+		envStr = string(config.EnvLocal)
 	}
+	env := config.Environment(envStr)
 	logger.Setup(env)
 
-	cfg, err := config.LoadConfig(".env")
+	configPath := ""
+	if env == config.EnvLocal {
+		configPath = ".env"
+	}
+
+	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
 		slog.Error("failed to load config", "error", err)
 		os.Exit(1)
@@ -136,8 +140,8 @@ func main() {
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     cfg.CORSOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		ExposeHeaders:    []string{"RateLimit-Limit", "RateLimit-Remaining", "RateLimit-Reset", "Retry-After"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-Request-ID"},
+		ExposeHeaders:    []string{"RateLimit-Limit", "RateLimit-Remaining", "RateLimit-Reset", "Retry-After", "X-Request-ID"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))

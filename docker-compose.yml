@@ -107,6 +107,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - JWT_SECRET=dev-secret-key-at-least-32-bytes-long!!
       - JWT_TTL=24h
+      - CORS_ORIGINS=http://localhost:5173
     labels:
       # Label này là "cầu nối" giữa Docker container và Alloy config
       # Alloy đọc label này (qua __meta_docker_container_label_app)

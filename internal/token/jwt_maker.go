@@ -47,7 +47,7 @@ func (m *JWTMaker) VerifyToken(tokenStr string) (string, error) {
 		tokenStr,
 		&jwt.RegisteredClaims{},
 		func(_ *jwt.Token) (any, error) {
-			return m.secretKey, nil
+			return []byte(m.secretKey), nil
 		},
 		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
 	)

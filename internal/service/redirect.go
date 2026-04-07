@@ -2,8 +2,9 @@ package service
 
 import (
 	"context"
-	"github.com/katatrina/url-shortener/internal/logger"
 	"time"
+
+	"github.com/katatrina/url-shortener/internal/logger"
 
 	"github.com/katatrina/url-shortener/internal/cache"
 	"github.com/katatrina/url-shortener/internal/metrics"
@@ -27,7 +28,7 @@ func (s *Service) Resolve(ctx context.Context, shortCode string, meta model.Clic
 					return "", model.ErrURLExpired
 				}
 
-				s.trackClick(cachedURL.ID, meta)
+				go s.trackClick(cachedURL.ID, meta)
 				return cachedURL.LongURL, nil
 			}
 			// Cache MISS — URL not in Redis, will query DB.
@@ -46,7 +47,7 @@ func (s *Service) Resolve(ctx context.Context, shortCode string, meta model.Clic
 
 	if s.urlCache != nil {
 		cachedURL := &cache.CachedURL{
-			ID:          u.ID,
+			ID:      u.ID,
 			LongURL: u.LongURL,
 		}
 		if u.ExpiresAt != nil {
@@ -59,7 +60,7 @@ func (s *Service) Resolve(ctx context.Context, shortCode string, meta model.Clic
 		}
 	}
 
-	s.trackClick(u.ID, meta)
+	go s.trackClick(u.ID, meta)
 
 	return u.LongURL, nil
 }

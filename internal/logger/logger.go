@@ -5,15 +5,16 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/katatrina/url-shortener/internal/config"
 	"github.com/rs/zerolog"
 )
 
 // Setup configs slog global logger with zerolog backend.
-func Setup(env string) {
+func Setup(env config.Environment) {
 	var zl zerolog.Logger
 
 	switch env {
-	case "production":
+	case config.EnvProduction:
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 		zl = zerolog.New(os.Stdout).With().Timestamp().Logger()
 	default:
