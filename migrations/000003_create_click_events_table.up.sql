@@ -5,10 +5,13 @@ CREATE TABLE click_events
     id         UUID PRIMARY KEY,
     url_id     UUID        NOT NULL REFERENCES urls (id),
 
-    ip_address INET,
-    referer    TEXT,
-    user_agent TEXT,
-    country    TEXT,
+    ip_address     INET,
+    referer        TEXT,
+    user_agent_raw TEXT,
+    os             TEXT,
+    browser        TEXT,
+    device_type    TEXT,
+    country        TEXT,
 
     clicked_at TIMESTAMPTZ NOT NULL
 );

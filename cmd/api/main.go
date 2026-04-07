@@ -18,6 +18,7 @@ import (
 	"github.com/katatrina/url-shortener/internal/analytics"
 	"github.com/katatrina/url-shortener/internal/cache"
 	"github.com/katatrina/url-shortener/internal/config"
+	"github.com/katatrina/url-shortener/internal/geoip"
 	"github.com/katatrina/url-shortener/internal/handler"
 	"github.com/katatrina/url-shortener/internal/logger"
 	"github.com/katatrina/url-shortener/internal/metrics"
@@ -90,7 +91,7 @@ func main() {
 		os.Exit(1)
 	}
 	rdb := redis.NewClient(redisOpts)
-	defer rdb.Close() //nolint:errcheck
+	defer rdb.Close()
 
 	if err = rdb.Ping(ctx).Err(); err != nil {
 		slog.Error("failed to ping Redis", "error", err)
@@ -109,8 +110,23 @@ func main() {
 	clickEventRepo := repository.NewClickEventRepository(db)
 	statsRepo := repository.NewURLStatsRepository(db)
 
+	// GeoIP resolver — optional, app vẫn chạy bình thường nếu không có DB file
+	var geoResolver *geoip.Resolver
+	geoDBPath := os.Getenv("GEOIP_DB_PATH")
+	if geoDBPath != "" {
+		var err error
+		geoResolver, err = geoip.New(geoDBPath)
+		if err != nil {
+			// Warn chứ không crash — analytics thiếu country vẫn OK
+			slog.Warn("geoip database not available, country data will be empty",
+				"path", geoDBPath, "error", err)
+		} else {
+			defer geoResolver.Close()
+		}
+	}
+
 	// ---- Analytics ClickCollector ----
-	collector := analytics.NewClickCollector(clickEventRepo, analytics.DefaultCollectorConfig())
+	collector := analytics.NewClickCollector(clickEventRepo, analytics.DefaultCollectorConfig(), geoResolver)
 	collector.Start()
 
 	aggregator := analytics.NewAggregator(statsRepo, 1*time.Minute) // 1 min for dev, 5-15 min for prod

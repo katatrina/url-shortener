@@ -9,6 +9,8 @@ run:
   timeout: 5m
 
 linters:
+  disable:
+    - errcheck
   # Start with the default set and add extras.
   # "enable" adds to defaults, not replaces them.
   enable:

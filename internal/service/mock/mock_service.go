@@ -292,6 +292,21 @@ func (m *MockClickEventQueryRepository) EXPECT() *MockClickEventQueryRepositoryM
 	return m.recorder
 }
 
+// GetTopBrowsers mocks base method.
+func (m *MockClickEventQueryRepository) GetTopBrowsers(ctx context.Context, urlID string, from, to time.Time, limit int) ([]model.BrowserStat, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTopBrowsers", ctx, urlID, from, to, limit)
+	ret0, _ := ret[0].([]model.BrowserStat)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTopBrowsers indicates an expected call of GetTopBrowsers.
+func (mr *MockClickEventQueryRepositoryMockRecorder) GetTopBrowsers(ctx, urlID, from, to, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTopBrowsers", reflect.TypeOf((*MockClickEventQueryRepository)(nil).GetTopBrowsers), ctx, urlID, from, to, limit)
+}
+
 // GetTopCountries mocks base method.
 func (m *MockClickEventQueryRepository) GetTopCountries(ctx context.Context, urlID string, from, to time.Time, limit int) ([]model.CountryStat, error) {
 	m.ctrl.T.Helper()
@@ -305,6 +320,36 @@ func (m *MockClickEventQueryRepository) GetTopCountries(ctx context.Context, url
 func (mr *MockClickEventQueryRepositoryMockRecorder) GetTopCountries(ctx, urlID, from, to, limit any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTopCountries", reflect.TypeOf((*MockClickEventQueryRepository)(nil).GetTopCountries), ctx, urlID, from, to, limit)
+}
+
+// GetTopDevices mocks base method.
+func (m *MockClickEventQueryRepository) GetTopDevices(ctx context.Context, urlID string, from, to time.Time, limit int) ([]model.DeviceStat, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTopDevices", ctx, urlID, from, to, limit)
+	ret0, _ := ret[0].([]model.DeviceStat)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTopDevices indicates an expected call of GetTopDevices.
+func (mr *MockClickEventQueryRepositoryMockRecorder) GetTopDevices(ctx, urlID, from, to, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTopDevices", reflect.TypeOf((*MockClickEventQueryRepository)(nil).GetTopDevices), ctx, urlID, from, to, limit)
+}
+
+// GetTopOSes mocks base method.
+func (m *MockClickEventQueryRepository) GetTopOSes(ctx context.Context, urlID string, from, to time.Time, limit int) ([]model.OSStat, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTopOSes", ctx, urlID, from, to, limit)
+	ret0, _ := ret[0].([]model.OSStat)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTopOSes indicates an expected call of GetTopOSes.
+func (mr *MockClickEventQueryRepositoryMockRecorder) GetTopOSes(ctx, urlID, from, to, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTopOSes", reflect.TypeOf((*MockClickEventQueryRepository)(nil).GetTopOSes), ctx, urlID, from, to, limit)
 }
 
 // GetTopReferrers mocks base method.

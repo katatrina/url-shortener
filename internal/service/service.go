@@ -32,6 +32,9 @@ type URLCacheRepository interface {
 type ClickEventQueryRepository interface {
 	GetTopReferrers(ctx context.Context, urlID string, from, to time.Time, limit int) ([]model.ReferrerStat, error)
 	GetTopCountries(ctx context.Context, urlID string, from, to time.Time, limit int) ([]model.CountryStat, error)
+	GetTopOSes(ctx context.Context, urlID string, from, to time.Time, limit int) ([]model.OSStat, error)
+	GetTopBrowsers(ctx context.Context, urlID string, from, to time.Time, limit int) ([]model.BrowserStat, error)
+	GetTopDevices(ctx context.Context, urlID string, from, to time.Time, limit int) ([]model.DeviceStat, error)
 }
 
 type URLStatsQueryRepository interface {

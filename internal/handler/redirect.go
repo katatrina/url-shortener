@@ -2,8 +2,9 @@ package handler
 
 import (
 	"errors"
-	"github.com/katatrina/url-shortener/internal/logger"
 	"net/http"
+
+	"github.com/katatrina/url-shortener/internal/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/katatrina/url-shortener/internal/model"

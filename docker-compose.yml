@@ -96,6 +96,20 @@ services:
       postgres:
         condition: service_healthy
 
+  # GeoIP database updater — tự động tải GeoLite2-Country.mmdb từ MaxMind.
+  # Chạy lần đầu khi container start, sau đó cập nhật mỗi 168h (1 tuần).
+  # File DB được chia sẻ với app qua volume geoip_data.
+  geoipupdate:
+    image: ghcr.io/maxmind/geoipupdate:v7
+    environment:
+      - GEOIPUPDATE_ACCOUNT_ID=${MAXMIND_ACCOUNT_ID}
+      - GEOIPUPDATE_LICENSE_KEY=${MAXMIND_LICENSE_KEY}
+      - GEOIPUPDATE_EDITION_IDS=GeoLite2-Country
+      - GEOIPUPDATE_FREQUENCY=168
+    volumes:
+      - geoip_data:/usr/share/GeoIP
+    # Container chạy daemon (không exit) nhờ GEOIPUPDATE_FREQUENCY > 0
+
   app:
     build: .
     restart: on-failure
@@ -108,11 +122,14 @@ services:
       - JWT_SECRET=dev-secret-key-at-least-32-bytes-long!!
       - JWT_TTL=24h
       - CORS_ORIGINS=http://localhost:5173
+      - GEOIP_DB_PATH=/geoip/GeoLite2-Country.mmdb
     labels:
       # Label này là "cầu nối" giữa Docker container và Alloy config
       # Alloy đọc label này (qua __meta_docker_container_label_app)
       # và gắn vào mọi log line → Loki query: {app="url-shortener"}
       - "app=url-shortener"
+    volumes:
+      - geoip_data:/geoip:ro
     ports:
       - "8080:8080"
     depends_on:
@@ -128,3 +145,4 @@ volumes:
   prometheus_data:
   grafana_data:
   loki_data:
+  geoip_data:

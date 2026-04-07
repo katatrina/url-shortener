@@ -75,6 +75,66 @@ func (r *ClickEventRepository) GetTopCountries(ctx context.Context, urlID string
 	return stats, nil
 }
 
+// GetTopOSes returns the most common operating systems for a URL's clicks within a date range.
+func (r *ClickEventRepository) GetTopOSes(ctx context.Context, urlID string, from, to time.Time, limit int) ([]model.OSStat, error) {
+	query := `
+		SELECT COALESCE(NULLIF(os, ''), 'Unknown') AS os, COUNT(*) AS click_count
+		FROM click_events
+		WHERE url_id = $1 AND clicked_at >= $2 AND clicked_at < $3
+		GROUP BY os
+		ORDER BY click_count DESC
+		LIMIT $4
+	`
+
+	rows, _ := r.db.Query(ctx, query, urlID, from, to, limit)
+	stats, err := pgx.CollectRows(rows, pgx.RowToStructByName[model.OSStat])
+	if err != nil {
+		return nil, err
+	}
+
+	return stats, nil
+}
+
+// GetTopBrowsers returns the most common browsers for a URL's clicks within a date range.
+func (r *ClickEventRepository) GetTopBrowsers(ctx context.Context, urlID string, from, to time.Time, limit int) ([]model.BrowserStat, error) {
+	query := `
+		SELECT COALESCE(NULLIF(browser, ''), 'Unknown') AS browser, COUNT(*) AS click_count
+		FROM click_events
+		WHERE url_id = $1 AND clicked_at >= $2 AND clicked_at < $3
+		GROUP BY browser
+		ORDER BY click_count DESC
+		LIMIT $4
+	`
+
+	rows, _ := r.db.Query(ctx, query, urlID, from, to, limit)
+	stats, err := pgx.CollectRows(rows, pgx.RowToStructByName[model.BrowserStat])
+	if err != nil {
+		return nil, err
+	}
+
+	return stats, nil
+}
+
+// GetTopDevices returns the most common device types for a URL's clicks within a date range.
+func (r *ClickEventRepository) GetTopDevices(ctx context.Context, urlID string, from, to time.Time, limit int) ([]model.DeviceStat, error) {
+	query := `
+		SELECT COALESCE(NULLIF(device_type, ''), 'Unknown') AS device_type, COUNT(*) AS click_count
+		FROM click_events
+		WHERE url_id = $1 AND clicked_at >= $2 AND clicked_at < $3
+		GROUP BY device_type
+		ORDER BY click_count DESC
+		LIMIT $4
+	`
+
+	rows, _ := r.db.Query(ctx, query, urlID, from, to, limit)
+	stats, err := pgx.CollectRows(rows, pgx.RowToStructByName[model.DeviceStat])
+	if err != nil {
+		return nil, err
+	}
+
+	return stats, nil
+}
+
 // SyncClickCounts updates urls.click_count from url_stats_daily totals.
 //
 // This is a denormalization step: we're copying aggregated data back

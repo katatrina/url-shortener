@@ -33,8 +33,11 @@ func (r *ClickEventRepository) BulkInsert(ctx context.Context, events []model.Cl
 			e.ID,
 			e.URLID,
 			e.IP,
-			e.UserAgent,
 			e.Referer,
+			e.UserAgentRaw,
+			e.OS,
+			e.Browser,
+			e.DeviceType,
 			e.Country,
 			e.ClickedAt,
 		}
@@ -44,7 +47,7 @@ func (r *ClickEventRepository) BulkInsert(ctx context.Context, events []model.Cl
 	_, err := r.db.CopyFrom(
 		ctx,
 		pgx.Identifier{"click_events"},
-		[]string{"id", "url_id", "ip_address", "user_agent", "referer", "country", "clicked_at"},
+		[]string{"id", "url_id", "ip_address", "referer", "user_agent_raw", "os", "browser", "device_type", "country", "clicked_at"},
 		pgx.CopyFromRows(rows),
 	)
 

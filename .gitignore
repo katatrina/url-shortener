@@ -12,3 +12,7 @@ tmp/
 
 # Docs
 docs/
+
+# GeoIP
+*.mmdb
+data/
