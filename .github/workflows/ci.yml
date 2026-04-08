@@ -245,3 +245,54 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # =============================================================
+  # Job 4: Deploy to Fly.io
+  # =============================================================
+  # Runs ONLY on push to main (not on PRs).
+  # Sequence: migrations first (schema must be ready before new app version),
+  # then deploy the new image via Fly.io remote builder.
+  #
+  # Required GitHub Secrets:
+  #   FLY_API_TOKEN  — generate with `fly tokens create deploy -x 999999h`
+  #   DATABASE_URL   — Neon direct (non-pooled) connection string for migrations
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    # Separate concurrency group from CI — a deploy in progress should NOT
+    # be canceled by a new push. Queue instead, so deployments are sequential.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      # Run migrations against production DB before deploying new code.
+      # This ensures the schema is ready for the new app version.
+      # Uses the same migrate CLI version as the test job.
+      - name: Install migrate CLI
+        run: |
+          curl -L https://github.com/golang-migrate/migrate/releases/download/v4.18.3/migrate.linux-amd64.tar.gz | tar xz
+          sudo mv migrate /usr/local/bin/migrate
+
+      - name: Run database migrations
+        run: migrate -path migrations -database "$DATABASE_URL" -verbose up
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      # Deploy using Fly.io's remote builder.
+      # --remote-only builds the Docker image on Fly.io's infrastructure,
+      # so we don't need to push to ghcr.io first (though we still do
+      # in the build job for rollback purposes).
+      - name: Setup Fly CLI
+        uses: superfly/flyctl-action/setup-flyctl@master
+
+      - name: Deploy to Fly.io
+        run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
