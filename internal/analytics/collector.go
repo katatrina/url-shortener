@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -46,8 +45,7 @@ type ClickCollector struct {
 	eventWriter ClickEventWriter
 	cfg         ClickCollectorConfig
 	geoResolver GeoResolver
-	wg          sync.WaitGroup
-	stopped     atomic.Bool
+	wg sync.WaitGroup
 }
 
 func NewClickCollector(
@@ -78,23 +76,18 @@ func (c *ClickCollector) Start() {
 // Stop signals all workers to shut down and waits for them to finish.
 //
 // How graceful shutdown works:
-// 1. c.stopped is set to true — Track() stops accepting new events
-// 2. close(c.eventCh) tells workers "no more events are coming"
-// 3. Workers finish processing any events still in the channel buffer
-// 4. Workers flush their final partial batch
-// 5. c.wg.Wait() blocks until every worker has exited
+// 1. close(c.eventCh) tells workers "no more events are coming"
+// 2. Workers finish processing any events still in the channel buffer
+// 3. Workers flush their final partial batch
+// 4. c.wg.Wait() blocks until every worker has exited
 //
-// Why stopped flag before close?
-// Track() is called via `go` from the HTTP handler. During shutdown, there's a
-// race window between srv.Shutdown() returning and close(eventCh): a goroutine
-// spawned just before shutdown could try to send on a closed channel → panic.
-// The atomic flag ensures Track() silently drops events once shutdown begins,
-// making the close safe.
+// Safety: Track() is called synchronously from the HTTP handler goroutine.
+// Since srv.Shutdown() waits for all in-flight requests to complete before
+// returning, no Track() call can happen after Stop() is called.
 //
 // After Stop returns, it's guaranteed that all buffered events have been persisted.
 func (c *ClickCollector) Stop() {
 	slog.Info("analytics collector stopping, draining remaining events...")
-	c.stopped.Store(true)
 	close(c.eventCh)
 	c.wg.Wait()
 	slog.Info("analytics collector stopped")
@@ -103,9 +96,8 @@ func (c *ClickCollector) Stop() {
 // Track queues a click event for async processing.
 // This is called from the Redirect service method on every click.
 //
-// Non-blocking: if the channel is full or the collector is shutting down,
-// the event is dropped rather than blocking the HTTP response.
-// This is a deliberate trade-off:
+// Non-blocking: if the channel is full, the event is dropped rather than
+// blocking the HTTP response. This is a deliberate trade-off:
 //   - User experience > analytics accuracy
 //   - A dropped analytics event is invisible to the user
 //   - A blocked redirect is a terrible user experience
@@ -114,13 +106,6 @@ func (c *ClickCollector) Stop() {
 // drops should be extremely rare. If you're seeing drops in logs,
 // it means you need more workers or a bigger buffer.
 func (c *ClickCollector) Track(urlID string, meta model.ClickMeta) {
-	// Check shutdown flag first to avoid sending on a closed channel.
-	// This is the only guard needed: once stopped is true, Stop() will
-	// close the channel. Without this check, a late goroutine could panic.
-	if c.stopped.Load() {
-		return
-	}
-
 	id, _ := uuid.NewV7()
 	country := c.geoResolver.Country(meta.IP) // Lookup from memory-mapped file, ~1 microsecond per call
 
