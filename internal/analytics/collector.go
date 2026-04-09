@@ -128,6 +128,7 @@ func (c *ClickCollector) Track(urlID string, meta model.ClickMeta) {
 
 	select {
 	case c.eventCh <- event:
+		slog.Debug("event queued", "url_id", urlID, "event_id", event.ID)
 	default:
 		// Channel full — event dropped.
 		metrics.AnalyticsEventsDropped.Inc()

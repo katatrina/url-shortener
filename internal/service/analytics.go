@@ -35,8 +35,11 @@ func (s *Service) GetURLStats(ctx context.Context, params model.GetURLStatsParam
 		return nil, model.ErrURLOwnerMismatch
 	}
 
-	to := time.Now().UTC().Truncate(24 * time.Hour)
-	from := to.AddDate(0, 0, -params.Days)
+	// "to" represents the upper bound of the query window.
+	// We use the current moment (UTC) to include all events that happened today.
+	to := time.Now().UTC()
+	// Use truncate(24h) for the daily stats "from" bound to align with full days.
+	from := to.Truncate(24*time.Hour).AddDate(0, 0, -params.Days)
 
 	var (
 		dailyStats   []model.DailyStat
