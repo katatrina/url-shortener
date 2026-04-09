@@ -49,6 +49,7 @@ func main() {
 		slog.Error("failed to load config", "error", err)
 		os.Exit(1)
 	}
+	cfg.LogEffective()
 
 	// ---- Metrics ----
 	// Register all Prometheus metrics before starting the server.

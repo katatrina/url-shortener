@@ -114,12 +114,12 @@ services:
     build: .
     restart: on-failure
     environment:
-      - APP_ENV=production
+      - APP_ENV=local
       - SERVER_PORT=8080
       - BASE_URL=http://localhost:8080
       - DATABASE_URL=postgres://root:secret@postgres:5432/url_shortener?sslmode=disable
       - REDIS_URL=redis://redis:6379/0
-      - JWT_SECRET=dev-secret-key-at-least-32-bytes-long!!
+      - JWT_SECRET=PgK13YiT0UpoxxpbusZJbnm85yNBEmdfcPCL4GLIxkT
       - JWT_TTL=24h
       - CORS_ORIGINS=http://localhost:5173
       - GEOIP_DB_PATH=/geoip/GeoLite2-Country.mmdb

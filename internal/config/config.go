@@ -50,6 +50,27 @@ func (c Config) Validate() error {
 	return nil
 }
 
+// LogEffective logs the effective configuration at startup, masking secrets.
+func (c Config) LogEffective() {
+	mask := func(s string) string {
+		if len(s) <= 8 {
+			return "***"
+		}
+		return s[:8] + "***"
+	}
+
+	slog.Info("effective config",
+		"APP_ENV", c.AppEnv,
+		"SERVER_PORT", c.ServerPort,
+		"BASE_URL", c.BaseURL,
+		"DATABASE_URL", mask(c.DatabaseURL),
+		"REDIS_URL", mask(c.RedisURL),
+		"JWT_SECRET", mask(c.JWTSecret),
+		"JWT_TTL", c.JWTTTL,
+		"CORS_ORIGINS", c.CORSOrigins,
+	)
+}
+
 func LoadConfig(path string) (*Config, error) {
 	viper.AutomaticEnv()
 
