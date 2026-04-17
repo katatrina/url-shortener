@@ -26,7 +26,7 @@ type LoginUserResult struct {
 	User                 *User
 }
 
-type ClickMeta struct {
+type ClickInfo struct {
 	IP        string
 	UserAgent string
 	Referer   string

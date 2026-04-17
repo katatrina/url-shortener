@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/katatrina/url-shortener/internal/metrics"
 	"github.com/katatrina/url-shortener/internal/model"
 	ua "github.com/mileusna/useragent"
 )
@@ -36,28 +35,21 @@ func DefaultCollectorConfig() ClickCollectorConfig {
 	}
 }
 
-type GeoResolver interface {
-	Country(ip string) string
-}
-
 type ClickCollector struct {
 	eventCh     chan model.ClickEvent
 	eventWriter ClickEventWriter
 	cfg         ClickCollectorConfig
-	geoResolver GeoResolver
-	wg sync.WaitGroup
+	wg          sync.WaitGroup
 }
 
 func NewClickCollector(
 	eventWriter ClickEventWriter,
 	cfg ClickCollectorConfig,
-	geoResolver GeoResolver,
 ) *ClickCollector {
 	return &ClickCollector{
 		eventCh:     make(chan model.ClickEvent, cfg.ChannelBuffer),
 		eventWriter: eventWriter,
 		cfg:         cfg,
-		geoResolver: geoResolver,
 	}
 }
 
@@ -105,9 +97,8 @@ func (c *ClickCollector) Stop() {
 // In practice, with a 10,000 buffer and workers draining continuously,
 // drops should be extremely rare. If you're seeing drops in logs,
 // it means you need more workers or a bigger buffer.
-func (c *ClickCollector) Track(urlID string, meta model.ClickMeta) {
+func (c *ClickCollector) Track(urlID string, meta model.ClickInfo) {
 	id, _ := uuid.NewV7()
-	country := c.geoResolver.Country(meta.IP) // Lookup from memory-mapped file, ~1 microsecond per call
 
 	// Parse User-Agent string to extract OS, browser, and device type.
 	// Pure CPU operation (string parsing), no I/O — safe to call inline.
@@ -119,10 +110,10 @@ func (c *ClickCollector) Track(urlID string, meta model.ClickMeta) {
 		IP:           toNullable(meta.IP),
 		Referer:      toNullable(meta.Referer),
 		UserAgentRaw: toNullable(meta.UserAgent),
-		OS:           toNullable(parsed.OS),
-		Browser:      toNullable(parsed.Name),
-		DeviceType:   toNullable(detectDevice(parsed)),
-		Country:      toNullable(country),
+		OS:         toNullable(parsed.OS),
+		Browser:    toNullable(parsed.Name),
+		DeviceType: toNullable(detectDevice(parsed)),
+		Country:    nil,
 		ClickedAt:    time.Now(),
 	}
 
@@ -131,7 +122,6 @@ func (c *ClickCollector) Track(urlID string, meta model.ClickMeta) {
 		slog.Debug("event queued", "url_id", urlID, "event_id", event.ID)
 	default:
 		// Channel full — event dropped.
-		metrics.AnalyticsEventsDropped.Inc()
 		slog.Warn("channel full, dropping event", "url_id", urlID)
 	}
 }
@@ -190,11 +180,8 @@ func (c *ClickCollector) worker(id int) {
 			// DB insert failed — log and discard the batch.
 			// In a production system, you might push failed events to a dead letter queue
 			// or retry with backoff. For now, logging is sufficient.
-			metrics.AnalyticsBatchErrors.Inc()
 			slog.Error("batch insert failed", "worker", id, "events_lost", len(batch), "error", err)
 		} else {
-			metrics.AnalyticsEventsInserted.Add(float64(len(batch)))
-			metrics.AnalyticsBatchFlushTotal.Inc()
 			slog.Debug("flushed events", "worker", id, "count", len(batch))
 		}
 
@@ -225,7 +212,6 @@ func (c *ClickCollector) worker(id int) {
 		case <-ticker.C:
 			// Timer fired — flush partial batch to avoid holding events too long.
 			flush()
-			metrics.AnalyticsQueueDepth.Set(float64(len(c.eventCh)))
 		}
 	}
 }

@@ -21,7 +21,7 @@ func (h *Handler) Redirect(c *gin.Context) {
 		return
 	}
 
-	longURL, err := h.service.Resolve(c.Request.Context(), shortCode, model.ClickMeta{
+	destinationURL, err := h.service.ResolveAndTrack(c.Request.Context(), shortCode, model.ClickInfo{
 		IP:        c.ClientIP(),
 		UserAgent: c.GetHeader("User-Agent"),
 		Referer:   c.GetHeader("Referer"),
@@ -39,5 +39,5 @@ func (h *Handler) Redirect(c *gin.Context) {
 		return
 	}
 
-	c.Redirect(http.StatusFound, longURL)
+	c.Redirect(http.StatusFound, destinationURL)
 }

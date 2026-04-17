@@ -8,14 +8,14 @@ import (
 	"github.com/katatrina/url-shortener/internal/logger"
 )
 
-// Logging records each request with full context.
+// Logger records each request with full context.
 //
 // Separated from Metrics middleware due to separation of concerns:
 // - Metrics: feeds Prometheus (metrics, aggregated)
-// - Logging: feeds Loki (details of each request, debuggable)
+// - Logger: feeds Loki (details of each request, debuggable)
 //
 // Both measure duration but serve different purposes.
-func Logging() gin.HandlerFunc {
+func Logger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 

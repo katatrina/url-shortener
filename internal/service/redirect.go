@@ -7,32 +7,25 @@ import (
 	"github.com/katatrina/url-shortener/internal/logger"
 
 	"github.com/katatrina/url-shortener/internal/cache"
-	"github.com/katatrina/url-shortener/internal/metrics"
 	"github.com/katatrina/url-shortener/internal/model"
 )
 
-func (s *Service) Resolve(ctx context.Context, shortCode string, meta model.ClickMeta) (string, error) {
+func (s *Service) ResolveAndTrack(ctx context.Context, shortCode string, clickInfo model.ClickInfo) (string, error) {
 	log := logger.FromContext(ctx)
 	if s.urlCache != nil {
 		cachedURL, err := s.urlCache.Get(ctx, shortCode)
 		if err != nil {
 			// Redis error — not a miss, it's an infrastructure failure.
-			metrics.CacheErrors.Inc()
 			log.Warn("cache get failed", "short_code", shortCode, "error", err)
 		} else {
 			if cachedURL != nil {
-				// Cache HIT — URL found in Redis.
-				metrics.CacheRequests.WithLabelValues("hit").Inc()
-
 				if cachedURL.ExpiresAt != nil && time.Now().Unix() > *cachedURL.ExpiresAt {
 					return "", model.ErrURLExpired
 				}
 
-				s.clickCollector.Track(cachedURL.ID, meta)
+				s.clickCollector.Track(cachedURL.ID, clickInfo)
 				return cachedURL.LongURL, nil
 			}
-			// Cache MISS — URL not in Redis, will query DB.
-			metrics.CacheRequests.WithLabelValues("miss").Inc()
 		}
 	}
 
@@ -60,7 +53,7 @@ func (s *Service) Resolve(ctx context.Context, shortCode string, meta model.Clic
 		}
 	}
 
-	s.clickCollector.Track(u.ID, meta)
+	s.clickCollector.Track(u.ID, clickInfo)
 
 	return u.LongURL, nil
 }

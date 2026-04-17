@@ -42,7 +42,7 @@ type URLStatsQueryRepository interface {
 }
 
 type ClickCollector interface {
-	Track(urlID string, meta model.ClickMeta)
+	Track(urlID string, meta model.ClickInfo)
 }
 
 type tokenCreator interface {

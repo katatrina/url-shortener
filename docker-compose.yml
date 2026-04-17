@@ -25,68 +25,6 @@ services:
       timeout: 5s
       retries: 10
 
-  # ---- Observability Stack ----
-
-  prometheus:
-    image: prom/prometheus:v3.4.0
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_data:/prometheus
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-
-  # Loki — log storage & query engine
-  # Vai trò giống Prometheus nhưng cho logs:
-  #   Prometheus: store metrics, query bằng PromQL
-  #   Loki:       store logs, query bằng LogQL
-  loki:
-    image: grafana/loki:3.5.0
-    ports:
-      - "3100:3100"
-    command: -config.file=/etc/loki/local-config.yaml
-    volumes:
-      - loki_data:/loki
-    # Config mặc định đủ cho development.
-    # Production cần tune: retention period, storage backend (S3),
-    # compaction, limits, etc.
-
-  # Alloy — log collector (thế hệ mới thay Promtail)
-  # Nó "ngồi" trên Docker socket, tự phát hiện containers,
-  # đọc stdout/stderr logs, parse JSON, rồi push sang Loki.
-  alloy:
-    image: grafana/alloy:latest
-    volumes:
-      - ./alloy/config.alloy:/etc/alloy/config.alloy
-      # Alloy cần Docker socket để discover containers
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      # Alloy cần đọc container log files trên host
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-    command:
-      - run
-      - /etc/alloy/config.alloy
-      - --stability.level=generally-available
-    depends_on:
-      - loki
-    # Alloy KHÔNG cần expose port — chỉ giao tiếp nội bộ với Loki
-
-  grafana:
-    image: grafana/grafana:11.6.0
-    ports:
-      - "3000:3000"
-    environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
-      GF_AUTH_ANONYMOUS_ENABLED: "true"
-      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
-    volumes:
-      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
-      - grafana_data:/var/lib/grafana
-    depends_on:
-      - prometheus
-      - loki
-
   migrator:
     image: migrate/migrate:v4.18.2
     command: ["-path", "/migrations", "-database", "postgres://root:secret@postgres:5432/url_shortener?sslmode=disable", "up"]
@@ -95,20 +33,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-
-  # GeoIP database updater — tự động tải GeoLite2-Country.mmdb từ MaxMind.
-  # Chạy lần đầu khi container start, sau đó cập nhật mỗi 168h (1 tuần).
-  # File DB được chia sẻ với app qua volume geoip_data.
-  geoipupdate:
-    image: ghcr.io/maxmind/geoipupdate:v7
-    environment:
-      - GEOIPUPDATE_ACCOUNT_ID=${MAXMIND_ACCOUNT_ID}
-      - GEOIPUPDATE_LICENSE_KEY=${MAXMIND_LICENSE_KEY}
-      - GEOIPUPDATE_EDITION_IDS=GeoLite2-Country
-      - GEOIPUPDATE_FREQUENCY=168
-    volumes:
-      - geoip_data:/usr/share/GeoIP
-    # Container chạy daemon (không exit) nhờ GEOIPUPDATE_FREQUENCY > 0
 
   app:
     build: .
@@ -122,14 +46,6 @@ services:
       - JWT_SECRET=PgK13YiT0UpoxxpbusZJbnm85yNBEmdfcPCL4GLIxkT
       - JWT_TTL=24h
       - CORS_ORIGINS=http://localhost:5173
-      - GEOIP_DB_PATH=/geoip/GeoLite2-Country.mmdb
-    labels:
-      # Label này là "cầu nối" giữa Docker container và Alloy config
-      # Alloy đọc label này (qua __meta_docker_container_label_app)
-      # và gắn vào mọi log line → Loki query: {app="url-shortener"}
-      - "app=url-shortener"
-    volumes:
-      - geoip_data:/geoip:ro
     ports:
       - "8080:8080"
     depends_on:
@@ -142,7 +58,3 @@ services:
 
 volumes:
   postgres_data:
-  prometheus_data:
-  grafana_data:
-  loki_data:
-  geoip_data:

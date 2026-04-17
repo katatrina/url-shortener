@@ -18,16 +18,13 @@ import (
 	"github.com/katatrina/url-shortener/internal/analytics"
 	"github.com/katatrina/url-shortener/internal/cache"
 	"github.com/katatrina/url-shortener/internal/config"
-	"github.com/katatrina/url-shortener/internal/geoip"
 	"github.com/katatrina/url-shortener/internal/handler"
 	"github.com/katatrina/url-shortener/internal/logger"
-	"github.com/katatrina/url-shortener/internal/metrics"
 	"github.com/katatrina/url-shortener/internal/middleware"
 	"github.com/katatrina/url-shortener/internal/repository"
 	"github.com/katatrina/url-shortener/internal/response"
 	"github.com/katatrina/url-shortener/internal/service"
 	"github.com/katatrina/url-shortener/internal/token"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -44,17 +41,12 @@ func main() {
 		configPath = ".env"
 	}
 
-	cfg, err := config.LoadConfig(configPath)
+	cfg, err := config.Load(configPath)
 	if err != nil {
 		slog.Error("failed to load config", "error", err)
 		os.Exit(1)
 	}
 	cfg.LogEffective()
-
-	// ---- Metrics ----
-	// Register all Prometheus metrics before starting the server.
-	// Must happen before any metric is used, otherwise Inc()/Observe() panics.
-	metrics.Register()
 
 	// Create a context that is canceled when the process receives SIGINT or SIGTERM.
 	//
@@ -82,9 +74,6 @@ func main() {
 	}
 	slog.Info("connected to database")
 
-	// Register DB pool metrics AFTER pool is created.
-	metrics.RegisterDBPool(db)
-
 	// ---- Redis ----
 	redisOpts, err := redis.ParseURL(cfg.RedisURL)
 	if err != nil {
@@ -111,23 +100,8 @@ func main() {
 	clickEventRepo := repository.NewClickEventRepository(db)
 	statsRepo := repository.NewURLStatsRepository(db)
 
-	// GeoIP resolver — optional, app vẫn chạy bình thường nếu không có DB file
-	var geoResolver *geoip.Resolver
-	geoDBPath := os.Getenv("GEOIP_DB_PATH")
-	if geoDBPath != "" {
-		var err error
-		geoResolver, err = geoip.New(geoDBPath)
-		if err != nil {
-			// Warn chứ không crash — analytics thiếu country vẫn OK
-			slog.Warn("geoip database not available, country data will be empty",
-				"path", geoDBPath, "error", err)
-		} else {
-			defer geoResolver.Close()
-		}
-	}
-
 	// ---- Analytics ClickCollector ----
-	collector := analytics.NewClickCollector(clickEventRepo, analytics.DefaultCollectorConfig(), geoResolver)
+	collector := analytics.NewClickCollector(clickEventRepo, analytics.DefaultCollectorConfig())
 	collector.Start()
 
 	aggregator := analytics.NewAggregator(statsRepo, 1*time.Minute) // 1 min for dev, 5-15 min for prod
@@ -141,14 +115,12 @@ func main() {
 	router := gin.New()
 
 	// Order of importance for middleware — read from top to bottom:
-	// 1. Metrics: measures all requests (even those rejected by subsequent middleware)
-	// 2. RequestID: creates an ID, attaches it to the context — all later logs will have the ID
-	// 3. Logging: logs the start/end request with the request_id
-	// 4. Recovery: catches panic, prevents server crashes
-	// 5. CORS: handles cross-origin
-	router.Use(middleware.Metrics())
+	// 1. RequestID: creates an ID, attaches it to the context — all later logs will have the ID
+	// 2. Logging: logs the start/end request with the request_id
+	// 3. Recovery: catches panic, prevents server crashes
+	// 4. CORS: handles cross-origin
 	router.Use(middleware.RequestID())
-	router.Use(middleware.Logging())
+	router.Use(middleware.Logger())
 	router.Use(gin.Recovery())
 
 	// CORS must be before any route handlers.
@@ -167,19 +139,6 @@ func main() {
 		response.NotFound(c, response.CodeRouteNotFound,
 			"The requested endpoint does not exist")
 	})
-
-	// Prometheus metrics endpoint.
-	//
-	// Why gin.WrapH instead of writing our own handler?
-	// promhttp.Handler() returns a standard net/http handler that formats
-	// all registered metrics in Prometheus's exposition format.
-	// gin.WrapH adapts it to Gin's handler signature.
-	//
-	// This endpoint is intentionally NOT under /api/v1 because:
-	//   1. It's for infrastructure (Prometheus), not for API consumers
-	//   2. By convention, /metrics is the standard path Prometheus expects
-	//   3. It should NOT go through auth or rate limiting middleware
-	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// Liveness: "process có đang chạy không?"
 	// K8s/Docker dùng cái này để quyết định có restart container không.

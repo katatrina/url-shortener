@@ -28,7 +28,7 @@ func newTestService(t *testing.T) (
 	return svc, urlRepo, urlCache, collector
 }
 
-var testMeta = model.ClickMeta{
+var testMeta = model.ClickInfo{
 	IP:        "127.0.0.1",
 	UserAgent: "Mozilla/5.0",
 	Referer:   "https://example.com",
@@ -40,14 +40,14 @@ func TestResolve_CacheHit(t *testing.T) {
 	urlCache.EXPECT().
 		Get(gomock.Any(), "abc1234").
 		Return(&cache.CachedURL{
-			ID:          "url-id-1",
+			ID:      "url-id-1",
 			LongURL: "https://example.com",
 		}, nil)
 
 	collector.EXPECT().
 		Track("url-id-1", testMeta)
 
-	got, err := svc.Resolve(context.Background(), "abc1234", testMeta)
+	got, err := svc.ResolveAndTrack(context.Background(), "abc1234", testMeta)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -63,12 +63,12 @@ func TestResolve_CacheHitExpired(t *testing.T) {
 	urlCache.EXPECT().
 		Get(gomock.Any(), "abc1234").
 		Return(&cache.CachedURL{
-			ID:          "url-id-1",
-			LongURL: "https://example.com",
-			ExpiresAt:   &past,
+			ID:        "url-id-1",
+			LongURL:   "https://example.com",
+			ExpiresAt: &past,
 		}, nil)
 
-	_, err := svc.Resolve(context.Background(), "abc1234", testMeta)
+	_, err := svc.ResolveAndTrack(context.Background(), "abc1234", testMeta)
 	if !errors.Is(err, model.ErrURLExpired) {
 		t.Fatalf("got %v, want ErrURLExpired", err)
 	}
@@ -84,9 +84,9 @@ func TestResolve_CacheMissThenDB(t *testing.T) {
 	urlRepo.EXPECT().
 		FindByShortCode(gomock.Any(), "abc1234").
 		Return(&model.URL{
-			ID:          "url-id-1",
-			ShortCode:   "abc1234",
-			LongURL: "https://example.com",
+			ID:        "url-id-1",
+			ShortCode: "abc1234",
+			LongURL:   "https://example.com",
 		}, nil)
 
 	urlCache.EXPECT().
@@ -96,7 +96,7 @@ func TestResolve_CacheMissThenDB(t *testing.T) {
 	collector.EXPECT().
 		Track("url-id-1", testMeta)
 
-	got, err := svc.Resolve(context.Background(), "abc1234", testMeta)
+	got, err := svc.ResolveAndTrack(context.Background(), "abc1234", testMeta)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -115,9 +115,9 @@ func TestResolve_CacheErrorFallsBackToDB(t *testing.T) {
 	urlRepo.EXPECT().
 		FindByShortCode(gomock.Any(), "abc1234").
 		Return(&model.URL{
-			ID:          "url-id-1",
-			ShortCode:   "abc1234",
-			LongURL: "https://example.com",
+			ID:        "url-id-1",
+			ShortCode: "abc1234",
+			LongURL:   "https://example.com",
 		}, nil)
 
 	urlCache.EXPECT().
@@ -127,7 +127,7 @@ func TestResolve_CacheErrorFallsBackToDB(t *testing.T) {
 	collector.EXPECT().
 		Track("url-id-1", testMeta)
 
-	got, err := svc.Resolve(context.Background(), "abc1234", testMeta)
+	got, err := svc.ResolveAndTrack(context.Background(), "abc1234", testMeta)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -147,7 +147,7 @@ func TestResolve_URLNotFound(t *testing.T) {
 		FindByShortCode(gomock.Any(), "noexist").
 		Return(nil, model.ErrURLNotFound)
 
-	_, err := svc.Resolve(context.Background(), "noexist", testMeta)
+	_, err := svc.ResolveAndTrack(context.Background(), "noexist", testMeta)
 	if !errors.Is(err, model.ErrURLNotFound) {
 		t.Fatalf("got %v, want ErrURLNotFound", err)
 	}
@@ -164,13 +164,13 @@ func TestResolve_DBURLExpired(t *testing.T) {
 	urlRepo.EXPECT().
 		FindByShortCode(gomock.Any(), "abc1234").
 		Return(&model.URL{
-			ID:          "url-id-1",
-			ShortCode:   "abc1234",
-			LongURL: "https://example.com",
-			ExpiresAt:   &past,
+			ID:        "url-id-1",
+			ShortCode: "abc1234",
+			LongURL:   "https://example.com",
+			ExpiresAt: &past,
 		}, nil)
 
-	_, err := svc.Resolve(context.Background(), "abc1234", testMeta)
+	_, err := svc.ResolveAndTrack(context.Background(), "abc1234", testMeta)
 	if !errors.Is(err, model.ErrURLExpired) {
 		t.Fatalf("got %v, want ErrURLExpired", err)
 	}
@@ -186,15 +186,15 @@ func TestResolve_NilCache(t *testing.T) {
 	urlRepo.EXPECT().
 		FindByShortCode(gomock.Any(), "abc1234").
 		Return(&model.URL{
-			ID:          "url-id-1",
-			ShortCode:   "abc1234",
-			LongURL: "https://example.com",
+			ID:        "url-id-1",
+			ShortCode: "abc1234",
+			LongURL:   "https://example.com",
 		}, nil)
 
 	collector.EXPECT().
 		Track("url-id-1", testMeta)
 
-	got, err := svc.Resolve(context.Background(), "abc1234", testMeta)
+	got, err := svc.ResolveAndTrack(context.Background(), "abc1234", testMeta)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

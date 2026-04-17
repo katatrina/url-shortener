@@ -431,7 +431,7 @@ func (m *MockClickCollector) EXPECT() *MockClickCollectorMockRecorder {
 }
 
 // Track mocks base method.
-func (m *MockClickCollector) Track(urlID string, meta model.ClickMeta) {
+func (m *MockClickCollector) Track(urlID string, meta model.ClickInfo) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Track", urlID, meta)
 }
