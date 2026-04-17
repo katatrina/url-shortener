@@ -14,11 +14,8 @@ A URL shortening service that converts long URLs into short, shareable links and
 - **Rate limiting** — per-IP throttling on the shorten endpoint (10 req/min)
 - **Async analytics pipeline** — click events are collected via goroutines + channels, batched, and bulk-inserted
 - **Daily stats aggregation** — background aggregator computes per-URL daily click stats
-- **Analytics API** — view top referrers, countries, and daily click trends per URL
+- **Analytics API** — view top referrers and daily click trends per URL
 - **Structured logging** — JSON-formatted logs via `log/slog` for production observability
-- **Prometheus metrics** — HTTP latency, cache hit/miss, analytics pipeline, and DB pool metrics
-- **Grafana dashboards** — pre-provisioned dashboards for monitoring
-- **CI/CD** — automated lint, test, and build via GitHub Actions
 - **CORS support** — configured for frontend development
 
 ## Tech Stack
@@ -33,9 +30,6 @@ A URL shortening service that converts long URLs into short, shareable links and
 | Auth            | JWT (HS256)                   |
 | Config          | Viper                         |
 | Logging         | log/slog (JSON)               |
-| Metrics         | Prometheus (client_golang)    |
-| Dashboards      | Grafana                       |
-| CI/CD           | GitHub Actions                |
 | Infrastructure  | Docker Compose                |
 
 ## Project Structure
@@ -49,8 +43,7 @@ url-shortener/
 │   ├── config/                # Environment config loading
 │   ├── handler/               # HTTP handlers (request/response)
 │   ├── logger/                # Structured logging setup (log/slog, JSON output)
-│   ├── metrics/               # Prometheus metrics (HTTP, cache, analytics, DB pool)
-│   ├── middleware/             # Auth, rate limiting, and metrics middleware
+│   ├── middleware/             # Auth and rate limiting middleware
 │   ├── model/                 # Domain models and errors
 │   ├── repository/            # Database queries
 │   ├── request/               # Validation, normalization, pagination
@@ -58,11 +51,7 @@ url-shortener/
 │   ├── service/               # Business logic
 │   ├── shortcode/             # Short code generation (crypto/rand + base62)
 │   └── token/                 # JWT creation and verification
-├── infra/
-│   ├── grafana/               # Grafana provisioning (dashboards + datasources)
-│   └── prometheus/            # Prometheus scrape config
 ├── migrations/                # PostgreSQL migrations
-├── .github/workflows/         # CI/CD pipeline
 ├── Dockerfile                 # Multi-stage Docker build
 ├── docker-compose.yml
 ├── Makefile
@@ -133,12 +122,6 @@ The server starts on `http://localhost:8080` by default.
 | GET    | `/api/v1/me/urls/:code/stats`  | Get click analytics & stats  |
 | DELETE | `/api/v1/me/urls/:code`        | Soft delete a URL            |
 | GET    | `/api/v1/me/profile`           | Get user profile             |
-
-### Infrastructure
-
-| Method | Path                    | Description                                        |
-|--------|-------------------------|----------------------------------------------------|
-| GET    | `/metrics`              | Prometheus metrics endpoint                        |
 
 ### Example: Shorten a URL
 
@@ -239,7 +222,7 @@ go test ./internal/service/ -v
 - [x] **Phase 1** — Core MVP: shorten, redirect, auth, CRUD, unit tests
 - [x] **Phase 2** — Redis caching + rate limiting
 - [x] **Phase 3** — Async analytics pipeline (goroutines + channels)
-- [x] **Phase 4** — Observability + CI/CD (Prometheus, Grafana, structured logging, GitHub Actions)
+- [x] **Phase 4** — Structured logging (log/slog)
 - [ ] **Phase 5** — Microservices migration
 - [ ] **Phase 6** — Frontend + public deployment
 
