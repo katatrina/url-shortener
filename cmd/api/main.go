@@ -29,23 +29,13 @@ import (
 )
 
 func main() {
-	envStr := os.Getenv("APP_ENV")
-	if envStr == "" {
-		envStr = string(config.EnvLocal)
-	}
-	env := config.Environment(envStr)
-	logger.Setup(env)
-
-	configPath := ""
-	if env == config.EnvLocal {
-		configPath = ".env"
-	}
-
-	cfg, err := config.Load(configPath)
+	cfg, err := config.Load()
 	if err != nil {
 		slog.Error("failed to load config", "error", err)
 		os.Exit(1)
 	}
+
+	logger.Setup(cfg)
 	cfg.LogEffective()
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -55,7 +45,7 @@ func main() {
 	dbCtx, dbCancel := context.WithTimeout(ctx, 10*time.Second)
 	defer dbCancel()
 
-	db, err := pgxpool.New(dbCtx, cfg.DatabaseURL)
+	db, err := pgxpool.New(dbCtx, cfg.Database.URL)
 	if err != nil {
 		slog.Error("failed to create database pool", "error", err)
 		os.Exit(1)
@@ -69,7 +59,7 @@ func main() {
 	slog.Info("connected to database")
 
 	// ---- Redis ----
-	redisOpts, err := redis.ParseURL(cfg.RedisURL)
+	redisOpts, err := redis.ParseURL(cfg.Redis.URL)
 	if err != nil {
 		slog.Error("failed to parse Redis URL", "error", err)
 		os.Exit(1)
@@ -84,7 +74,7 @@ func main() {
 	slog.Info("connected to Redis")
 
 	// ---- Dependencies ----
-	tokenMaker := token.NewJWTMaker(cfg.JWTSecret, cfg.JWTTTL)
+	tokenMaker := token.NewJWTMaker(cfg.JWT.Secret, cfg.JWT.TTL)
 
 	rateLimiter := redis_rate.NewLimiter(rdb)
 
@@ -102,7 +92,7 @@ func main() {
 	aggregator.Start()
 
 	svc := service.New(urlRepo, userRepo, urlCache, clickEventRepo, statsRepo, tokenMaker, collector)
-	h := handler.New(svc, cfg.BaseURL)
+	h := handler.New(svc, cfg.Server.BaseURL)
 
 	// ---- Router ----
 	gin.SetMode(gin.ReleaseMode)
@@ -113,7 +103,7 @@ func main() {
 	router.Use(gin.Recovery())
 
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     cfg.CORSOrigins,
+		AllowOrigins:     cfg.CORS.Origins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-Request-ID"},
 		ExposeHeaders:    []string{"RateLimit-Limit", "RateLimit-Remaining", "RateLimit-Reset", "Retry-After", "X-Request-ID"},
@@ -181,14 +171,14 @@ func main() {
 		}
 	}
 
-	// ---- Start Server ----
+	// ---- Start HTTP Server ----
 
 	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%s", cfg.ServerPort),
+		Addr:         fmt.Sprintf(":%s", cfg.Server.Port),
 		Handler:      router,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		ReadTimeout:  cfg.Server.ReadTimeout,
+		WriteTimeout: cfg.Server.WriteTimeout,
+		IdleTimeout:  cfg.Server.IdleTimeout,
 	}
 
 	go func() {
@@ -206,7 +196,7 @@ func main() {
 
 	stop()
 
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), cfg.Server.ShutdownTimeout)
 	defer shutdownCancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
