@@ -60,12 +60,12 @@ type Config struct {
 	LogLevel    string   `env:"LOG_LEVEL" envDefault:"debug"`
 }
 
-func (c Config) IsProduction() bool {
+func (c *Config) IsProduction() bool {
 	return c.AppEnv == EnvProduction
 }
 
 // Validate .
-func (c Config) Validate() error {
+func (c *Config) Validate() error {
 	if !c.AppEnv.IsValid() {
 		return fmt.Errorf("invalid APP_ENV %q (must be 'local' or 'production')", c.AppEnv)
 	}
@@ -107,7 +107,7 @@ func Load() (*Config, error) {
 	return &cfg, nil
 }
 
-func (c Config) LogEffective() {
+func (c *Config) LogEffective() {
 	mask := func(s string) string {
 		if s == "" {
 			return "<empty>"
