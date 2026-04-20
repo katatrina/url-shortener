@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+
 	"github.com/katatrina/url-shortener/internal/logger"
 
 	"github.com/gin-gonic/gin"
@@ -11,7 +12,7 @@ import (
 )
 
 func (h *Handler) Register(c *gin.Context) {
-	log := logger.FromContext(c.Request.Context())
+	log := logger.FromRequestContext(c.Request.Context())
 	var req RegisterRequest
 	if err := request.ShouldBindJSON(c, &req); err != nil {
 		response.HandleJSONBindingError(c, err)
@@ -19,9 +20,9 @@ func (h *Handler) Register(c *gin.Context) {
 	}
 
 	user, err := h.service.Register(c.Request.Context(), model.CreateUserParams{
-		Email:       req.Email,
-		FullName:    req.FullName,
-		Password:    req.Password,
+		Email:    req.Email,
+		FullName: req.FullName,
+		Password: req.Password,
 	})
 	if err != nil {
 		switch {
@@ -38,7 +39,7 @@ func (h *Handler) Register(c *gin.Context) {
 }
 
 func (h *Handler) Login(c *gin.Context) {
-	log := logger.FromContext(c.Request.Context())
+	log := logger.FromRequestContext(c.Request.Context())
 	var req LoginRequest
 	if err := request.ShouldBindJSON(c, &req); err != nil {
 		response.HandleJSONBindingError(c, err)

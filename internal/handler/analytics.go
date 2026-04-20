@@ -2,8 +2,9 @@ package handler
 
 import (
 	"errors"
-	"github.com/katatrina/url-shortener/internal/logger"
 	"strconv"
+
+	"github.com/katatrina/url-shortener/internal/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/katatrina/url-shortener/internal/middleware"
@@ -12,7 +13,7 @@ import (
 )
 
 func (h *Handler) GetURLStats(c *gin.Context) {
-	log := logger.FromContext(c.Request.Context())
+	log := logger.FromRequestContext(c.Request.Context())
 	userID := middleware.MustGetAuthUserID(c)
 	shortCode := c.Param("code")
 	days, _ := strconv.Atoi(c.DefaultQuery("days", "30"))

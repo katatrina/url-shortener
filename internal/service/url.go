@@ -3,8 +3,9 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/katatrina/url-shortener/internal/logger"
 	"time"
+
+	"github.com/katatrina/url-shortener/internal/logger"
 
 	"github.com/google/uuid"
 	"github.com/katatrina/url-shortener/internal/model"
@@ -41,14 +42,14 @@ func (s *Service) ShortenURL(ctx context.Context, params model.ShortenURLParams)
 
 	now := time.Now()
 	newURL := model.URL{
-		ID:          id.String(),
-		ShortCode:   code,
-		LongURL: params.LongURL,
-		UserID:      params.UserID,
-		ClickCount:  0,
-		ExpiresAt:   params.ExpiresAt,
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		ID:         id.String(),
+		ShortCode:  code,
+		LongURL:    params.LongURL,
+		UserID:     params.UserID,
+		ClickCount: 0,
+		ExpiresAt:  params.ExpiresAt,
+		CreatedAt:  now,
+		UpdatedAt:  now,
 	}
 
 	created, err := s.urlRepo.Create(ctx, newURL)
@@ -108,7 +109,7 @@ func (s *Service) ListUserURLs(ctx context.Context, userID string, limit, offset
 }
 
 func (s *Service) DeleteUserURL(ctx context.Context, shortCode, userID string) error {
-	log := logger.FromContext(ctx)
+	log := logger.FromRequestContext(ctx)
 	u, err := s.urlRepo.FindByShortCode(ctx, shortCode)
 	if err != nil {
 		return err

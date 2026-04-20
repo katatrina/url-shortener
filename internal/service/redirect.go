@@ -11,7 +11,7 @@ import (
 )
 
 func (s *Service) ResolveAndTrack(ctx context.Context, shortCode string, clickInfo model.ClickInfo) (string, error) {
-	log := logger.FromContext(ctx)
+	log := logger.FromRequestContext(ctx)
 	if s.urlCache != nil {
 		cachedURL, err := s.urlCache.Get(ctx, shortCode)
 		if err != nil {

@@ -155,7 +155,9 @@ jobs:
           SERVER_PORT: "8080"
           BASE_URL: http://localhost:8080
           JWT_SECRET: ci-test-secret-key-at-least-32-bytes-long!!
-          JWT_EXPIRY: 24h
+          JWT_TTL: 24h
+          CORS_ORIGINS: http://localhost:5173
+          LOG_LEVEL: debug
 
       # Upload coverage report as a build artifact.
       # You can download it from the Actions tab to inspect locally.
@@ -256,7 +258,7 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    needs: [build]
+    needs: [ build ]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     # Separate concurrency group from CI — a deploy in progress should NOT

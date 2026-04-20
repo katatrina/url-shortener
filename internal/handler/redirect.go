@@ -13,7 +13,7 @@ import (
 )
 
 func (h *Handler) Redirect(c *gin.Context) {
-	log := logger.FromContext(c.Request.Context())
+	log := logger.FromRequestContext(c.Request.Context())
 	shortCode := c.Param("code")
 
 	if !shortcode.IsValid(shortCode) {

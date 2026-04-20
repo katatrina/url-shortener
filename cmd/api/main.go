@@ -31,6 +31,8 @@ import (
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
+		// Logger chưa setup → dùng default handler. Lỗi config là fatal,
+		// thà log thô mà chạy chứ đừng cố setup logger khi config hỏng.
 		slog.Error("failed to load config", "error", err)
 		os.Exit(1)
 	}
@@ -74,7 +76,7 @@ func main() {
 	slog.Info("connected to Redis")
 
 	// ---- Dependencies ----
-	tokenMaker := token.NewJWTMaker(cfg.JWT.Secret, cfg.JWT.TTL)
+	tokenMaker := token.NewJWTMaker(cfg.JWT.SecretKey, cfg.JWT.TTL)
 
 	rateLimiter := redis_rate.NewLimiter(rdb)
 
@@ -103,7 +105,7 @@ func main() {
 	router.Use(gin.Recovery())
 
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     cfg.CORS.Origins,
+		AllowOrigins:     cfg.CORSOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-Request-ID"},
 		ExposeHeaders:    []string{"RateLimit-Limit", "RateLimit-Remaining", "RateLimit-Reset", "Retry-After", "X-Request-ID"},

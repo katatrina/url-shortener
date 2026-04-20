@@ -2,16 +2,18 @@ package middleware
 
 import (
 	"fmt"
-	"log/slog"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis_rate/v10"
+	"github.com/katatrina/url-shortener/internal/logger"
 	"github.com/katatrina/url-shortener/internal/response"
 )
 
 func RateLimit(limiter *redis_rate.Limiter, limit redis_rate.Limit) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		log := logger.FromRequestContext(c.Request.Context())
+
 		// Lib redis_rate always adds a fixed prefix "rate" to every key.
 		key := fmt.Sprintf("%s:%s", "shorten", c.ClientIP())
 
@@ -21,7 +23,7 @@ func RateLimit(limiter *redis_rate.Limiter, limit redis_rate.Limit) gin.HandlerF
 		if err != nil {
 			// Redis down — let the request through (Fail open).
 			// Else, Fail closed = block.
-			slog.Warn("rate limit check failed", "error", err)
+			log.Warn("rate limit check failed", "error", err)
 			c.Next()
 			return
 		}

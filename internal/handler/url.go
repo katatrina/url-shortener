@@ -2,8 +2,9 @@ package handler
 
 import (
 	"errors"
-	"github.com/katatrina/url-shortener/internal/logger"
 	"time"
+
+	"github.com/katatrina/url-shortener/internal/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/katatrina/url-shortener/internal/middleware"
@@ -13,7 +14,7 @@ import (
 )
 
 func (h *Handler) ShortenURL(c *gin.Context) {
-	log := logger.FromContext(c.Request.Context())
+	log := logger.FromRequestContext(c.Request.Context())
 	var req ShortenURLRequest
 	if err := request.ShouldBindJSON(c, &req); err != nil {
 		response.HandleJSONBindingError(c, err)
@@ -21,7 +22,7 @@ func (h *Handler) ShortenURL(c *gin.Context) {
 	}
 
 	arg := model.ShortenURLParams{
-		LongURL: req.LongURL,
+		LongURL:     req.LongURL,
 		CustomAlias: req.CustomAlias,
 		UserID:      middleware.GetAuthUserID(c),
 	}
@@ -47,7 +48,7 @@ func (h *Handler) ShortenURL(c *gin.Context) {
 }
 
 func (h *Handler) ListUserURLs(c *gin.Context) {
-	log := logger.FromContext(c.Request.Context())
+	log := logger.FromRequestContext(c.Request.Context())
 	userID := middleware.MustGetAuthUserID(c)
 	pagination := request.ParsePaginationParams(c)
 
@@ -67,7 +68,7 @@ func (h *Handler) ListUserURLs(c *gin.Context) {
 }
 
 func (h *Handler) GetUserURL(c *gin.Context) {
-	log := logger.FromContext(c.Request.Context())
+	log := logger.FromRequestContext(c.Request.Context())
 	userID := middleware.MustGetAuthUserID(c)
 	shortCode := c.Param("code")
 
@@ -88,7 +89,7 @@ func (h *Handler) GetUserURL(c *gin.Context) {
 }
 
 func (h *Handler) DeleteUserURL(c *gin.Context) {
-	log := logger.FromContext(c.Request.Context())
+	log := logger.FromRequestContext(c.Request.Context())
 	userID := middleware.MustGetAuthUserID(c)
 	shortCode := c.Param("code")
 
