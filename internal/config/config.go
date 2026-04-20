@@ -79,7 +79,8 @@ func (c Config) Validate() error {
 		return fmt.Errorf("JWT_TTL must be positive, got %v", c.JWT.TTL)
 	}
 
-	switch strings.ToLower(c.LogLevel) {
+	c.LogLevel = strings.ToLower(c.LogLevel)
+	switch c.LogLevel {
 	case "debug", "info", "warn", "error":
 	default:
 		return fmt.Errorf("invalid LOG_LEVEL %q", c.LogLevel)
