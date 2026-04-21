@@ -100,10 +100,15 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
 
-	router.Use(middleware.RequestID())
-	router.Use(middleware.Logger())
+	// Global middleware — thứ tự quan trọng:
+	// 1. Recovery đầu tiên để catch panic từ mọi middleware sau nó (bao gồm cả logger).
+	//    Nếu đặt cuối, panic ở middleware khác sẽ không được recover.
+	// 2. RequestID trước Logger — logger cần request_id từ ctx.
+	// 3. Logger gần cuối — để log có đầy đủ status/duration.
+	// 4. CORS ở đâu cũng được (không phụ thuộc ai), nhưng đặt sớm để preflight
+	//    OPTIONS không bị middleware sau block.
 	router.Use(gin.Recovery())
-
+	router.Use(middleware.RequestID())
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     cfg.CORSOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -112,6 +117,7 @@ func main() {
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
+	router.Use(middleware.Logger())
 
 	router.NoRoute(func(c *gin.Context) {
 		response.NotFound(c, response.CodeRouteNotFound,
@@ -150,7 +156,7 @@ func main() {
 	v1 := router.Group("/api/v1")
 	{
 		v1.POST("/shorten",
-			middleware.RateLimit(rateLimiter, redis_rate.PerMinute(10)), // 10 requests per minute per IP.
+			middleware.RateLimit(rateLimiter, "shorten", redis_rate.PerMinute(10)), // 10 requests per minute per IP.
 			middleware.OptionalAuth(tokenMaker),
 			h.ShortenURL,
 		)

@@ -4,9 +4,10 @@ CREATE TABLE links
 (
     id              UUID PRIMARY KEY,
     user_id         UUID REFERENCES users (id),
+
     destination_url TEXT        NOT NULL,
     short_code      TEXT        NOT NULL,
-
+    title           TEXT,
     click_count     BIGINT      NOT NULL DEFAULT 0,
     expires_at      TIMESTAMPTZ,
 
