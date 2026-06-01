@@ -1,13 +1,26 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/katatrina/url-shortener/internal/config"
+	"github.com/katatrina/url-shortener/internal/logger"
 )
 
 func main() {
+	cfg, err := config.Load()
+	if err != nil {
+		slog.Error("failed to load config", "error", err)
+		os.Exit(1)
+	}
+
+	logger.Setup(cfg)
+	cfg.Log()
+
+	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 
 	r.GET("/healthz", func(c *gin.Context) {
@@ -15,6 +28,6 @@ func main() {
 	})
 
 	if err := r.Run(); err != nil {
-		log.Fatalf("failed to run server: %v", err)
+		slog.Error("failed to run server", "error", err)
 	}
 }
