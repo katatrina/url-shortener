@@ -1,0 +1,11 @@
+services:
+  postgres:
+    image: postgres:16.4-bookworm
+
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: url_shortener
+
+    ports:
+      - "127.0.0.1:5432:5432"

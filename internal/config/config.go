@@ -31,8 +31,9 @@ func (e Environment) IsProduction() bool {
 
 // Config .
 type Config struct {
-	AppEnv   Environment `env:"APP_ENV,required"`
-	LogLevel string      `env:"LOG_LEVEL"`
+	AppEnv      Environment `env:"APP_ENV,required"`
+	DatabaseURL string      `env:"DATABASE_URL,required"`
+	LogLevel    string      `env:"LOG_LEVEL"`
 }
 
 // Validate .
