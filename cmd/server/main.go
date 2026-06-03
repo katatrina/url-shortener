@@ -38,7 +38,12 @@ func main() {
 	r := gin.Default()
 
 	r.GET("/healthz", func(c *gin.Context) {
-		c.Status(http.StatusOK)
+		if err := db.Ping(c.Request.Context()); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"status": "service unavailable"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
 	if err := r.Run(); err != nil {
