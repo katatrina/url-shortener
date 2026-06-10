@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"log/slog"
+	"os"
 
 	"github.com/caarlos0/env/v11"
 	"github.com/joho/godotenv"
@@ -53,8 +54,12 @@ func (c *Config) Validate() error {
 
 // Load .
 func Load() (*Config, error) {
-	if err := godotenv.Load(); err != nil {
-		return nil, err
+	// Only load .env for local development; in production config comes from
+	// real environment variables (e.g. -e flags, compose, k8s secrets).
+	if _, err := os.Stat(".env"); err == nil {
+		if err := godotenv.Load(); err != nil {
+			return nil, err
+		}
 	}
 
 	var cfg Config
