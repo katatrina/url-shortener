@@ -1,8 +1,22 @@
-.PHONY: server compose compose-down network build run
+DATABASE_URL ?= postgres://root:secret@localhost:5432/url_shortener?sslmode=disable
+MIGRATIONS_DIR = ./migrations
 
 # --- Dev hằng ngày: chạy thẳng trên máy ---
 server:
 	go run ./cmd/server
+
+# --- Migration ---
+migrate-create:
+	goose -dir $(MIGRATIONS_DIR) -s create $(name) sql
+
+migrate-up:
+	goose -dir $(MIGRATIONS_DIR) postgres "$(DATABASE_URL)" up
+
+migrate-down:
+	goose -dir $(MIGRATIONS_DIR) postgres "$(DATABASE_URL)" down
+
+migrate-status:
+	goose -dir $(MIGRATIONS_DIR) postgres "$(DATABASE_URL)" status -v
 
 # --- Hạ tầng local ---
 network:
@@ -14,7 +28,7 @@ compose: network
 compose-down:
 	docker compose down
 
-# --- Deploy ---
+# --- Test container ---
 build:
 	docker build -t url-shortener .
 
