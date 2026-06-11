@@ -1,0 +1,20 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    - gosec
+
+  settings:
+    errcheck:
+      exclude-functions:
+        - (io.Closer).Close
+
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+          - gosec
