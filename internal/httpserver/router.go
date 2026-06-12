@@ -13,8 +13,8 @@ func NewRouter(db *pgxpool.Pool) *gin.Engine {
 
 	r := gin.New()
 
+	r.Use(middleware.Recovery())
 	r.Use(middleware.RequestID())
-	r.Use(gin.Recovery())
 
 	r.GET("/healthz", healthz(db))
 
