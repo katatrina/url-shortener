@@ -59,6 +59,10 @@ func run() error {
 	srv := &http.Server{
 		Addr:    ":8080",
 		Handler: r,
+
+		// Thời gian tối đa server chờ đọc xong header từ client,
+		// chống client gửi header nhỏ giọt (Slowloris kinh điển).
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	serverErr := make(chan error)

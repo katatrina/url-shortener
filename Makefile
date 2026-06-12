@@ -5,6 +5,9 @@ MIGRATIONS_DIR = ./migrations
 server:
 	go run ./cmd/server
 
+lint:
+	golangci-lint run
+
 # --- Migration ---
 migrate-create:
 	goose -dir $(MIGRATIONS_DIR) -s create $(name) sql
