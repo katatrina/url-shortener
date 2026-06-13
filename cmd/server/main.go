@@ -37,7 +37,11 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("create db pool: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		slog.Info("closing db pool...")
+		db.Close()
+		slog.Info("db pool closed")
+	}()
 
 	if err := db.Ping(context.Background()); err != nil {
 		return fmt.Errorf("ping db: %w", err)
@@ -71,7 +75,7 @@ func run() error {
 		return fmt.Errorf("start server: %w", err)
 	case <-notifyCtx.Done():
 		stop()
-		slog.Info("shutting down gracefully...")
+		slog.Info("shutting down server gracefully...")
 	}
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
