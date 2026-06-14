@@ -1,19 +1,30 @@
+# Phiên bản schema cấu hình của golangci-lint (v2)
 version: "2"
 
 run:
+  # Thời gian tối đa cho một lần chạy lint trước khi bị hủy
   timeout: 5m
 
 linters:
+  # Mặc định đã bật sẵn bộ standard gồm 5 linter:
+  #   - errcheck:     phát hiện lỗi trả về (error) bị bỏ qua, không xử lý
+  #   - govet:        các kiểm tra của `go vet` (sai format, struct tag, copy lock...)
+  #   - ineffassign:  phát hiện phép gán vô nghĩa (gán nhưng không dùng)
+  #   - staticcheck:  phân tích tĩnh diện rộng (bug, code thừa, đơn giản hóa...)
+  #   - unused:       phát hiện code không dùng (hàm, biến, type, const)
   enable:
+    # Bật thêm gosec để quét các vấn đề bảo mật trong code
     - gosec
 
   settings:
     errcheck:
+      # Bỏ qua việc kiểm tra lỗi trả về của các hàm sau
       exclude-functions:
         - (io.Closer).Close
 
   exclusions:
     rules:
+      # Nới lỏng quy tắc cho file test
       - path: _test\.go
         linters:
           - errcheck
