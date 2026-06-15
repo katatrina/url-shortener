@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# Workflow này chỉ đọc code, không ghi gì vào repo.
+permissions:
+  contents: read
+
+# Mỗi branch/PR chỉ giữ 1 run mới nhất. Push liên tục thì hủy run cũ đang chạy dở,
+# đỡ phí CI minutes và đỡ phải chờ.
+concurrency:
+  group: ci-${{ github.ref }} # ${{ github.ref }} là một biến môi trường đặc biệt đại diện cho branch, tag, PR,... đã kích hoạt workflow
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod # đọc version từ go.mod, khỏi hardcode
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.12.2 # pin cứng để CI không tự dò khi golangci-lint ra bản mới
+
+  build-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Verify dependencies
+        run: go mod verify # check deps trong cache khớp hash trong go.sum
+
+      - name: Build
+        run: go build ./...
+
+      - name: Test
+        run: go test ./... # giờ chưa có test nên no-op

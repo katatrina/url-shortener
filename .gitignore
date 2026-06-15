@@ -1,14 +1,26 @@
-# IDE
-.idea/
-.vscode/
-
-# Secrets
-.env
-
-# Go
-vendor/
+# Binaries
 *.exe
-tmp/
+*.dll
+*.so
+*.dylib
+/bin/
+/build/
 
-# Docs
-docs/
+# Test & coverage
+*.test
+*.out
+coverage.*
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db

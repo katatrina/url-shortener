@@ -1,0 +1,17 @@
+name: url-shortener
+services:
+  postgres:
+    image: postgres:16.4-bookworm
+
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: url_shortener
+
+    ports:
+      - "5432:5432"
+
+networks:
+  default:
+    name: url-shortener-network
+    external: true
