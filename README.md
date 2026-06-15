@@ -1,0 +1,1 @@
+[![CI](https://github.com/katatrina/url-shortener/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/katatrina/url-shortener/actions/workflows/ci.yml)
