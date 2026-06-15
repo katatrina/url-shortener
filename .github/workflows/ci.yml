@@ -43,6 +43,8 @@ jobs:
 
       - name: Setup Go
         uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
 
       - name: Verify dependencies
         run: go mod verify # check deps trong cache khớp hash trong go.sum
@@ -51,4 +53,4 @@ jobs:
         run: go build ./...
 
       - name: Test
-        run: go test -race ./... # -race bật race detector; giờ chưa có test nên no-op
+        run: go test ./... # giờ chưa có test nên no-op
