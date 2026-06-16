@@ -10,12 +10,6 @@ import (
 // AccessLog .
 func AccessLog() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// "/healthz" bị Fly.io gọi vài giây một lần - log nó là tự spam mình.
-		if c.Request.URL.Path == "/healthz" {
-			c.Next()
-			return
-		}
-
 		start := time.Now()
 		method := c.Request.Method
 		path := c.Request.URL.Path
