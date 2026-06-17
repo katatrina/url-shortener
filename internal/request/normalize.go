@@ -10,7 +10,7 @@ import (
 // Currently, it does not support nested struct.
 func NormalizeStrings(s any) {
 	v := reflect.ValueOf(s)
-	if v.Kind() == reflect.Ptr {
+	if v.Kind() == reflect.Pointer {
 		v = v.Elem()
 	}
 	if v.Kind() != reflect.Struct {
@@ -27,7 +27,7 @@ func NormalizeStrings(s any) {
 
 		// Get string value (supports string and *string)
 		var str string
-		isPtr := field.Kind() == reflect.Ptr
+		isPtr := field.Kind() == reflect.Pointer
 		if isPtr {
 			if field.IsNil() || field.Elem().Kind() != reflect.String {
 				continue
