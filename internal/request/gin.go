@@ -1,7 +1,6 @@
 package request
 
 import (
-	"bytes"
 	"encoding/json"
 	"io"
 
@@ -16,7 +15,12 @@ import (
 //
 //	var req Request
 //	if err := request.ShouldBindJSON(c, &req); err != nil {
-//	    response.HandleJSONBindingError(c, err)
+//	    if fields, ok := request.AsValidationErrors(err); ok {
+//	        response.FailValidation(c, fields)
+//	        return
+//	    }
+//	    response.Fail(c, http.StatusBadRequest, response.CodeJSONFormatInvalid,
+//	        "Request body must be valid JSON")
 //	    return
 //	}
 func ShouldBindJSON(c *gin.Context, obj any) error {
@@ -24,7 +28,6 @@ func ShouldBindJSON(c *gin.Context, obj any) error {
 	if err != nil {
 		return err
 	}
-	c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
 
 	if err = json.Unmarshal(body, obj); err != nil {
 		return err

@@ -1,8 +1,13 @@
 package user
 
 type SignupRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email    string `json:"email"    validate:"required,email" normalize:"trim,lower"`
+	Password string `json:"password" validate:"required,min=8,max=32,max_bytes=72,strong_password"`
+}
+
+type SignupParams struct {
+	Email    string
+	Password string
 }
 
 type UserResponse struct {
@@ -11,11 +16,6 @@ type UserResponse struct {
 	FullName  *string `json:"fullName"`
 	CreatedAt int64   `json:"createdAt"`
 	UpdatedAt int64   `json:"updatedAt"`
-}
-
-type SignupParams struct {
-	Email    string
-	Password string
 }
 
 func newUserResponse(u *User) UserResponse {

@@ -2,6 +2,7 @@ package user
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -10,26 +11,36 @@ import (
 )
 
 type Handler struct {
-	userService *Service
+	userSvc *Service
+}
+
+func NewHandler(svc *Service) *Handler {
+	return &Handler{userSvc: svc}
 }
 
 func (h *Handler) Signup(c *gin.Context) {
 	var req SignupRequest
 	if err := request.ShouldBindJSON(c, &req); err != nil {
-		response.HandleJSONBindingError(c, err)
+		if fields, ok := request.AsValidationErrors(err); ok {
+			response.FailValidation(c, fields)
+			return
+		}
+		response.Fail(c, http.StatusBadRequest, response.CodeJSONFormatInvalid,
+			"Request body must be valid JSON")
 		return
 	}
 
-	user, err := h.userService.Signup(c.Request.Context(), SignupParams(req))
+	user, err := h.userSvc.Signup(c.Request.Context(), SignupParams(req))
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrEmailAlreadyExists):
-			response.Conflict(c, response.CodeEmailAlreadyExists, "Email already exists")
+			response.Fail(c, http.StatusConflict, response.CodeEmailAlreadyExists, "Email already exists")
 		default:
-			response.InternalServerError(c)
+			slog.Error("internal server error", "error", err)
+			response.Internal(c)
 		}
 		return
 	}
 
-	c.JSON(http.StatusCreated, newUserResponse(user))
+	response.Success(c, http.StatusCreated, newUserResponse(user))
 }

@@ -1,121 +1,108 @@
 package request
 
 import (
+	"errors"
 	"reflect"
+	"strconv"
 	"strings"
 	"unicode"
 
-	"github.com/go-playground/locales/en"
-	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
-	enTranslations "github.com/go-playground/validator/v10/translations/en"
+	"github.com/katatrina/url-shortener/internal/response"
 )
 
-var (
-	validate *validator.Validate
-	trans    ut.Translator
-)
-
-// FieldErrorCode represents the type of validation error.
-type FieldErrorCode string
-
-const (
-	FieldCodeRequired      FieldErrorCode = "REQUIRED"
-	FieldCodeInvalidFormat FieldErrorCode = "INVALID_FORMAT"
-	FieldCodeMinValue      FieldErrorCode = "MIN_VALUE"
-	FieldCodeMaxValue      FieldErrorCode = "MAX_VALUE"
-	FieldCodeWeakPassword  FieldErrorCode = "WEAK_PASSWORD"
-)
-
-// FieldError represents a validation error for a specific field.
-type FieldError struct {
-	Field   string         `json:"field"`
-	Value   any            `json:"value"`
-	Code    FieldErrorCode `json:"code"`
-	Message string         `json:"message"`
-}
+var validate *validator.Validate
 
 func init() {
 	validate = validator.New()
 
-	enLocale := en.New()
-	uni := ut.New(enLocale, enLocale)
-	trans, _ = uni.GetTranslator("en")
-	_ = enTranslations.RegisterDefaultTranslations(validate, trans)
-
-	validate.RegisterTagNameFunc(func(field reflect.StructField) string {
-		name := strings.SplitN(field.Tag.Get("json"), ",", 2)[0]
-		if name == "-" {
-			return field.Name
+	// báo lỗi bằng tên json (email, fullName), không phải tên field
+	validate.RegisterTagNameFunc(func(f reflect.StructField) string {
+		name := strings.SplitN(f.Tag.Get("json"), ",", 2)[0]
+		if name == "" || name == "-" {
+			return f.Name
 		}
 		return name
 	})
 
-	registerCustomMessages()
-	registerCustomRules()
+	_ = validate.RegisterValidation("max_bytes", validateMaxBytes)
+	_ = validate.RegisterValidation("strong_password", validateStrongPassword)
 }
 
-// TranslateValidationErrors converts validator.ValidationErrors to a slice of FieldError.
-func TranslateValidationErrors(errs validator.ValidationErrors) []FieldError {
-	fieldErrors := make([]FieldError, 0, len(errs))
-	for _, e := range errs {
-		fieldErrors = append(fieldErrors, FieldError{
-			Field:   toCamelCase(e.Field()),
-			Value:   e.Value(),
-			Code:    mapValidationTag(e.Tag()),
-			Message: e.Translate(trans),
+// max_bytes: đếm BYTE, không phải rune — bcrypt chỉ dùng 72 byte đầu.
+func validateMaxBytes(fl validator.FieldLevel) bool {
+	limit, err := strconv.Atoi(fl.Param())
+	if err != nil {
+		return false
+	}
+	return len(fl.Field().String()) <= limit
+}
+
+func validateStrongPassword(fl validator.FieldLevel) bool {
+	var upper, lower, digit, special bool
+	for _, ch := range fl.Field().String() {
+		switch {
+		case unicode.IsUpper(ch):
+			upper = true
+		case unicode.IsLower(ch):
+			lower = true
+		case unicode.IsDigit(ch):
+			digit = true
+		case !unicode.IsLetter(ch) && !unicode.IsDigit(ch):
+			special = true
+		}
+	}
+	return upper && lower && digit && special
+}
+
+func AsValidationErrors(err error) ([]response.FieldError, bool) {
+	var ve validator.ValidationErrors
+	if !errors.As(err, &ve) {
+		return nil, false
+	}
+	out := make([]response.FieldError, 0, len(ve))
+	for _, e := range ve {
+		out = append(out, response.FieldError{
+			Field:   e.Field(),
+			Code:    mapTag(e.Tag()),
+			Message: messageFor(e),
 		})
 	}
-
-	return fieldErrors
+	return out, true
 }
 
-// mapValidationTag maps validator tags to FieldErrorCode constants.
-func mapValidationTag(tag string) FieldErrorCode {
+func mapTag(tag string) response.FieldErrorCode {
 	switch tag {
 	case "required":
-		return FieldCodeRequired
+		return response.FieldCodeRequired
 	case "email":
-		return FieldCodeInvalidFormat
+		return response.FieldCodeInvalidFormat
 	case "min", "gte":
-		return FieldCodeMinValue
-	case "max", "lte":
-		return FieldCodeMaxValue
-	case "strong_pass":
-		return FieldCodeWeakPassword
-
+		return response.FieldCodeTooShort
+	case "max", "lte", "max_bytes":
+		return response.FieldCodeTooLong
+	case "strong_password":
+		return response.FieldCodeWeakPassword
 	default:
-		return FieldErrorCode(strings.ToUpper(tag))
+		return response.FieldCodeInvalid
 	}
 }
 
-// toCamelCase converts PascalCase to camelCase.
-// FullName -> fullName
-// UserID -> userId (properly handles acronyms)
-func toCamelCase(s string) string {
-	if s == "" {
-		return ""
+// tag của validator -> template. {field} = tên json, {param} = tham số rule.
+var messages = map[string]string{
+	"required":        "{field} is required",
+	"email":           "{field} must be a valid email address",
+	"min":             "{field} must be at least {param} characters",
+	"max":             "{field} must be at most {param} characters",
+	"max_bytes":       "{field} is too long",
+	"strong_password": "{field} must include an uppercase letter, a lowercase letter, a number, and a special character",
+}
+
+func messageFor(e validator.FieldError) string {
+	tmpl, ok := messages[e.Tag()]
+	if !ok {
+		tmpl = "{field} is invalid"
 	}
-
-	// Convert the first character to the lowercase
-	runes := []rune(s)
-	runes[0] = unicode.ToLower(runes[0])
-
-	// Handle acronyms: UserID -> userId, not userID
-	// Find where the acronym ends (when we hit a lowercase letter)
-	for i := 1; i < len(runes)-1; i++ {
-		if unicode.IsUpper(runes[i]) && unicode.IsLower(runes[i+1]) {
-			// This is where acronym ends
-			// e.g., "UserID" -> i=4 (D), so convert I to lowercase
-			// Result: "userId"
-			break
-		}
-		if unicode.IsUpper(runes[i]) {
-			runes[i] = unicode.ToLower(runes[i])
-		} else {
-			break
-		}
-	}
-
-	return string(runes)
+	m := strings.ReplaceAll(tmpl, "{field}", e.Field())
+	return strings.ReplaceAll(m, "{param}", e.Param())
 }
