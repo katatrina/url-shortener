@@ -89,6 +89,8 @@ func mapTag(tag string) response.FieldErrorCode {
 }
 
 // tag của validator -> template. {field} = tên json, {param} = tham số rule.
+//
+//nolint:gosec // G101 false positive: đây là template thông báo lỗi, không phải credential.
 var messages = map[string]string{
 	"required":        "{field} is required",
 	"email":           "{field} must be a valid email address",
