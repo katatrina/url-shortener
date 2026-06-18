@@ -36,7 +36,7 @@ func (h *Handler) Signup(c *gin.Context) {
 		case errors.Is(err, ErrEmailAlreadyExists):
 			response.Fail(c, http.StatusConflict, response.CodeEmailAlreadyExists, "Email already exists")
 		default:
-			slog.Error("internal server error", "error", err)
+			slog.ErrorContext(c.Request.Context(), "signup failed", "error", err)
 			response.Internal(c)
 		}
 		return

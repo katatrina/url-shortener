@@ -19,8 +19,7 @@ func Recovery() gin.HandlerFunc {
 
 			ctx := c.Request.Context()
 
-			slog.Error("panic recovered",
-				"request_id", RequestIDFromContext(ctx),
+			slog.ErrorContext(ctx, "panic recovered",
 				"method", c.Request.Method,
 				"path", c.Request.URL.Path,
 				"panic", r,

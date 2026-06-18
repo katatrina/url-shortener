@@ -1,10 +1,11 @@
 package middleware
 
 import (
-	"context"
+	"log/slog"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/katatrina/url-shortener/internal/logger"
 )
 
 // RequestID .
@@ -13,17 +14,12 @@ func RequestID() gin.HandlerFunc {
 		id, _ := uuid.NewV7()
 		requestID := id.String()
 
-		ctx := context.WithValue(c.Request.Context(), requestIDKey, requestID)
-		c.Request = c.Request.WithContext(ctx)
+		ctx := c.Request.Context()
+		ctx = logger.WithAttrs(ctx, slog.String("request_id", requestID))
 
+		c.Request = c.Request.WithContext(ctx)
 		c.Header("X-Request-ID", requestID)
 
 		c.Next()
 	}
-}
-
-// RequestIDFromContext .
-func RequestIDFromContext(ctx context.Context) string {
-	id, _ := ctx.Value(requestIDKey).(string)
-	return id
 }

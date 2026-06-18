@@ -21,7 +21,6 @@ func AccessLog() gin.HandlerFunc {
 		status := c.Writer.Status()
 
 		attrs := []any{
-			"request_id", RequestIDFromContext(ctx),
 			"method", method,
 			"path", path,
 			"status", status,
@@ -37,11 +36,11 @@ func AccessLog() gin.HandlerFunc {
 
 		switch {
 		case status >= 500:
-			slog.Error("request completed", attrs...)
+			slog.ErrorContext(ctx, "request completed", attrs...)
 		case status >= 400:
-			slog.Warn("request completed", attrs...)
+			slog.WarnContext(ctx, "request completed", attrs...)
 		default:
-			slog.Info("request completed", attrs...)
+			slog.InfoContext(ctx, "request completed", attrs...)
 		}
 	}
 }
