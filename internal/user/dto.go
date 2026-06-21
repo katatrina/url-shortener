@@ -1,5 +1,7 @@
 package user
 
+import "time"
+
 type SignupRequest struct {
 	Email    string `json:"email"    validate:"required,email" normalize:"trim,lower"`
 	Password string `json:"password" validate:"required,min=8,max=32,max_bytes=72,strong_password"`
@@ -8,6 +10,28 @@ type SignupRequest struct {
 type SignupParams struct {
 	Email    string
 	Password string
+}
+
+type LoginRequest struct {
+	Email    string `json:"email" validate:"required,email" normalize:"trim,lower"`
+	Password string `json:"password" validate:"required"`
+}
+
+type LoginParams struct {
+	Email    string
+	Password string
+}
+
+type LoginResponse struct {
+	AccessToken          string       `json:"accessToken"`
+	AccessTokenExpiresAt int64        `json:"accessTokenExpiresAt"`
+	User                 UserResponse `json:"user"`
+}
+
+type LoginResult struct {
+	AccessToken          string
+	AccessTokenExpiresAt time.Time
+	User                 *User
 }
 
 type UserResponse struct {

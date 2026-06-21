@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/caarlos0/env/v11"
 	"github.com/joho/godotenv"
@@ -32,9 +33,11 @@ func (e Environment) IsProduction() bool {
 
 // Config .
 type Config struct {
-	AppEnv      Environment `env:"APP_ENV,required"`
-	DatabaseURL string      `env:"DATABASE_URL,required"`
-	LogLevel    string      `env:"LOG_LEVEL,required"`
+	AppEnv      Environment   `env:"APP_ENV,required"`
+	DatabaseURL string        `env:"DATABASE_URL,required"`
+	LogLevel    string        `env:"LOG_LEVEL,required"`
+	JWTSecret   string        `env:"JWT_SECRET,required"`
+	JWTTTL      time.Duration `env:"JWT_TTL,required"`
 }
 
 // Validate .

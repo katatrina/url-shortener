@@ -26,16 +26,14 @@ func Setup(cfg *config.Config) {
 	var handler slog.Handler
 	if cfg.AppEnv.IsProduction() {
 		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-			AddSource: true,
-			Level:     logLevel,
+			Level: logLevel,
 		})
 	} else {
 		handler = tint.NewHandler(os.Stdout, &tint.Options{
-			AddSource:  true,
 			Level:      logLevel,
 			TimeFormat: time.Kitchen,
 		})
 	}
 
-	slog.SetDefault(slog.New(handler))
+	slog.SetDefault(slog.New(contextHandler{handler}))
 }
