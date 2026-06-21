@@ -2,21 +2,26 @@ package user
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/katatrina/url-shortener/internal/token"
 	"golang.org/x/crypto/bcrypt"
 )
 
 const bcryptCost = 12
 
 type Service struct {
-	userRepo *Repository
+	userRepo    *Repository
+	tokenIssuer *token.Issuer
 }
 
-func NewService(repo *Repository) *Service {
-	return &Service{userRepo: repo}
+func NewService(userRepo *Repository, tokenIssuer *token.Issuer) *Service {
+	return &Service{userRepo,
+		tokenIssuer,
+	}
 }
 
 func (s *Service) Signup(ctx context.Context, params SignupParams) (*User, error) {
@@ -40,4 +45,32 @@ func (s *Service) Signup(ctx context.Context, params SignupParams) (*User, error
 	}
 
 	return user, nil
+}
+
+func (s *Service) Login(ctx context.Context, params LoginParams) (*LoginResult, error) {
+	user, err := s.userRepo.FindByEmail(ctx, params.Email)
+	if err != nil {
+		if errors.Is(err, ErrUserNotFound) {
+			return nil, ErrCredentialsIncorrect
+		}
+		return nil, err
+	}
+
+	if err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(params.Password)); err != nil {
+		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+			return nil, ErrCredentialsIncorrect
+		}
+		return nil, fmt.Errorf("failed to compare password: %w", err)
+	}
+
+	accessToken, expiresAt, err := s.tokenIssuer.Issue(user.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create token: %w", err)
+	}
+
+	return &LoginResult{
+		AccessToken:          accessToken,
+		AccessTokenExpiresAt: expiresAt,
+		User:                 user,
+	}, nil
 }

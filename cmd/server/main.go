@@ -15,6 +15,7 @@ import (
 	"github.com/katatrina/url-shortener/internal/config"
 	"github.com/katatrina/url-shortener/internal/httpserver"
 	"github.com/katatrina/url-shortener/internal/logger"
+	"github.com/katatrina/url-shortener/internal/token"
 )
 
 func main() {
@@ -48,7 +49,9 @@ func run() error {
 	}
 	slog.Info("connected to db")
 
-	r := httpserver.NewRouter(db)
+	tokenIssuer := token.NewIssuer(cfg.JWTSecret, cfg.JWTTTL)
+
+	r := httpserver.NewRouter(db, tokenIssuer)
 
 	srv := &http.Server{
 		Addr:    ":8080",

@@ -41,3 +41,22 @@ func (r *Repository) Create(ctx context.Context, user User) (*User, error) {
 
 	return &created, nil
 }
+
+func (r *Repository) FindByEmail(ctx context.Context, email string) (*User, error) {
+	query := `
+		SELECT id, email, full_name, password_hash, created_at, updated_at
+		FROM users
+		WHERE email = $1
+	`
+
+	rows, _ := r.db.Query(ctx, query, email)
+	user, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[User])
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrUserNotFound
+		}
+		return nil, err
+	}
+
+	return &user, nil
+}
