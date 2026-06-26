@@ -19,14 +19,13 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 
 func (r *Repository) Create(ctx context.Context, user User) (*User, error) {
 	query := `
-		INSERT INTO users (id, email, password_hash, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO users (id, email, password_hash)
+		VALUES ($1, $2, $3)
 		RETURNING id, email, full_name, password_hash, created_at, updated_at
 	`
 
 	rows, _ := r.db.Query(ctx, query,
 		user.ID, user.Email, user.PasswordHash,
-		user.CreatedAt, user.UpdatedAt,
 	)
 
 	created, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[User])

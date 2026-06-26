@@ -2,10 +2,10 @@ package middleware
 
 import (
 	"log/slog"
-	"net/http"
 	"runtime/debug"
 
 	"github.com/gin-gonic/gin"
+	"github.com/katatrina/url-shortener/internal/response"
 )
 
 // Recovery .
@@ -26,9 +26,7 @@ func Recovery() gin.HandlerFunc {
 				"stack", string(debug.Stack()),
 			)
 
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-				"error": "internal server error",
-			})
+			response.Internal(c)
 		}()
 
 		c.Next()

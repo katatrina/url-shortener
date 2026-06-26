@@ -13,9 +13,10 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/katatrina/url-shortener/internal/config"
-	"github.com/katatrina/url-shortener/internal/httpserver"
 	"github.com/katatrina/url-shortener/internal/logger"
+	"github.com/katatrina/url-shortener/internal/router"
 	"github.com/katatrina/url-shortener/internal/token"
+	"github.com/katatrina/url-shortener/internal/user"
 )
 
 func main() {
@@ -51,7 +52,9 @@ func run() error {
 
 	tokenIssuer := token.NewIssuer(cfg.JWTSecret, cfg.JWTTTL)
 
-	r := httpserver.NewRouter(db, tokenIssuer)
+	userHandler := user.NewHandler(user.NewService(user.NewRepository(db), tokenIssuer))
+
+	r := router.New(userHandler)
 
 	srv := &http.Server{
 		Addr:    ":8080",

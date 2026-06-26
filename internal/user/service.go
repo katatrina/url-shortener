@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/katatrina/url-shortener/internal/token"
@@ -19,8 +18,9 @@ type Service struct {
 }
 
 func NewService(userRepo *Repository, tokenIssuer *token.Issuer) *Service {
-	return &Service{userRepo,
-		tokenIssuer,
+	return &Service{
+		userRepo:    userRepo,
+		tokenIssuer: tokenIssuer,
 	}
 }
 
@@ -32,13 +32,10 @@ func (s *Service) Signup(ctx context.Context, params SignupParams) (*User, error
 		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	now := time.Now()
 	user, err := s.userRepo.Create(ctx, User{
 		ID:           id.String(),
 		Email:        params.Email,
 		PasswordHash: string(passwordHash),
-		UpdatedAt:    now,
-		CreatedAt:    now,
 	})
 	if err != nil {
 		return nil, err
