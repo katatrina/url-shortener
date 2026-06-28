@@ -8,7 +8,6 @@ import (
 	"github.com/katatrina/url-shortener/internal/response"
 )
 
-// Recovery .
 func Recovery() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {

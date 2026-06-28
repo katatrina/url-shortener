@@ -8,7 +8,6 @@ import (
 	"github.com/katatrina/url-shortener/internal/logger"
 )
 
-// RequestID .
 func RequestID() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id, _ := uuid.NewV7()

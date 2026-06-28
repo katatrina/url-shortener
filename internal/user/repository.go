@@ -17,7 +17,13 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) Create(ctx context.Context, user User) (*User, error) {
+type CreateUserParams struct {
+	ID           string
+	Email        string
+	PasswordHash string
+}
+
+func (r *Repository) Create(ctx context.Context, arg CreateUserParams) (*User, error) {
 	query := `
 		INSERT INTO users (id, email, password_hash)
 		VALUES ($1, $2, $3)
@@ -25,7 +31,7 @@ func (r *Repository) Create(ctx context.Context, user User) (*User, error) {
 	`
 
 	rows, _ := r.db.Query(ctx, query,
-		user.ID, user.Email, user.PasswordHash,
+		arg.ID, arg.Email, arg.PasswordHash,
 	)
 
 	created, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[User])

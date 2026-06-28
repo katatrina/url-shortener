@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/katatrina/url-shortener/internal/token"
@@ -24,17 +25,22 @@ func NewService(userRepo *Repository, tokenIssuer *token.Issuer) *Service {
 	}
 }
 
-func (s *Service) Signup(ctx context.Context, params SignupParams) (*User, error) {
+type SignupParams struct {
+	Email    string
+	Password string
+}
+
+func (s *Service) Signup(ctx context.Context, arg SignupParams) (*User, error) {
 	id, _ := uuid.NewV7()
 
-	passwordHash, err := bcrypt.GenerateFromPassword([]byte(params.Password), bcryptCost)
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(arg.Password), bcryptCost)
 	if err != nil {
 		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	user, err := s.userRepo.Create(ctx, User{
+	user, err := s.userRepo.Create(ctx, CreateUserParams{
 		ID:           id.String(),
-		Email:        params.Email,
+		Email:        arg.Email,
 		PasswordHash: string(passwordHash),
 	})
 	if err != nil {
@@ -44,8 +50,19 @@ func (s *Service) Signup(ctx context.Context, params SignupParams) (*User, error
 	return user, nil
 }
 
-func (s *Service) Login(ctx context.Context, params LoginParams) (*LoginResult, error) {
-	user, err := s.userRepo.FindByEmail(ctx, params.Email)
+type LoginParams struct {
+	Email    string
+	Password string
+}
+
+type LoginResult struct {
+	AccessToken          string
+	AccessTokenExpiresAt time.Time
+	User                 *User
+}
+
+func (s *Service) Login(ctx context.Context, arg LoginParams) (*LoginResult, error) {
+	user, err := s.userRepo.FindByEmail(ctx, arg.Email)
 	if err != nil {
 		if errors.Is(err, ErrUserNotFound) {
 			return nil, ErrCredentialsIncorrect
@@ -53,7 +70,7 @@ func (s *Service) Login(ctx context.Context, params LoginParams) (*LoginResult, 
 		return nil, err
 	}
 
-	if err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(params.Password)); err != nil {
+	if err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(arg.Password)); err != nil {
 		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
 			return nil, ErrCredentialsIncorrect
 		}

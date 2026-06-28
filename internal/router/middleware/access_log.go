@@ -7,7 +7,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// AccessLog .
 func AccessLog() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
@@ -15,7 +14,7 @@ func AccessLog() gin.HandlerFunc {
 		path := c.Request.URL.Path
 		query := c.Request.URL.RawQuery
 
-		c.Next() // ──── toàn bộ phần còn lại của request chạy ở đây ────
+		c.Next() // ──── toàn bộ phần còn lại của request chạy sau dòng này ────
 
 		ctx := c.Request.Context()
 		status := c.Writer.Status()
