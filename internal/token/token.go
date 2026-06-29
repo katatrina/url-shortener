@@ -47,12 +47,12 @@ func (i *Issuer) Issue(userID string) (string, time.Time, error) {
 	return tokenStr, expiresAt, nil
 }
 
-func (i *Issuer) Verify(tokenStr string) (string, error) {
+func (i *Issuer) Verify(tokenStr string) (userID string, err error) {
 	t, err := jwt.ParseWithClaims(
 		tokenStr,
 		&jwt.RegisteredClaims{},
 		func(_ *jwt.Token) (any, error) {
-			return []byte(i.secret), nil
+			return i.secret, nil
 		},
 		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
 	)
