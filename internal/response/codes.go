@@ -8,6 +8,7 @@ const (
 	CodeEmailAlreadyExists   ErrorCode = "EMAIL_ALREADY_EXISTS"
 	CodeInternalServerError  ErrorCode = "INTERNAL_SERVER_ERROR"
 	CodeCredentialsIncorrect ErrorCode = "INCORRECT_CREDENTIALS"
+	CodeUnauthorized         ErrorCode = "UNAUTHORIZED"
 )
 
 type FieldErrorCode string
