@@ -9,8 +9,10 @@ const defaultLength = 7
 
 const base62Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 
+// Generate returns a random base62 slug of defaultLength characters.
 func Generate() string {
 	bytes := make([]byte, defaultLength)
+	// crypto/rand.Read never returns an error (Go 1.24+).
 	_, _ = rand.Read(bytes)
 
 	var sb strings.Builder
@@ -22,7 +24,12 @@ func Generate() string {
 	return sb.String()
 }
 
+// IsValid reports whether s is a valid slug: a non-empty ASCII string of [A-Za-z0-9-_].
 func IsValid(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+
 	for i := 0; i < len(s); i++ {
 		if !isAllowedByte(s[i]) {
 			return false
