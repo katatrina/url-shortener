@@ -33,7 +33,7 @@ func (h *Handler) Signup(c *gin.Context) {
 	user, err := h.userSvc.Signup(c.Request.Context(), SignupParams(req))
 	if err != nil {
 		switch {
-		case errors.Is(err, ErrEmailAlreadyExists):
+		case errors.Is(err, ErrEmailExists):
 			response.Fail(c, http.StatusConflict, response.CodeEmailAlreadyExists, "Email already exists")
 		default:
 			slog.ErrorContext(c.Request.Context(), "signup failed", "error", err)

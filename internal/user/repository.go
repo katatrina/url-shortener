@@ -34,17 +34,17 @@ func (r *Repository) Create(ctx context.Context, arg CreateUserParams) (*User, e
 		arg.ID, arg.Email, arg.PasswordHash,
 	)
 
-	created, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[User])
+	user, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[User])
 	if err != nil {
 		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 			if pgErr.Code == "23505" && pgErr.ConstraintName == "users_email_key" {
-				return nil, ErrEmailAlreadyExists
+				return nil, ErrEmailExists
 			}
 		}
 		return nil, err
 	}
 
-	return &created, nil
+	return &user, nil
 }
 
 func (r *Repository) FindByEmail(ctx context.Context, email string) (*User, error) {
