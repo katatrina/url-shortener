@@ -9,6 +9,7 @@ const (
 	CodeInternalServerError  ErrorCode = "INTERNAL_SERVER_ERROR"
 	CodeCredentialsIncorrect ErrorCode = "INCORRECT_CREDENTIALS"
 	CodeUnauthorized         ErrorCode = "UNAUTHORIZED"
+	CodePayloadTooLarge      ErrorCode = "PAYLOAD_TOO_LARGE"
 )
 
 type FieldErrorCode string

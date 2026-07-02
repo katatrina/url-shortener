@@ -20,13 +20,7 @@ func NewHandler(svc *Service) *Handler {
 
 func (h *Handler) Signup(c *gin.Context) {
 	var req SignupRequest
-	if err := request.ShouldBindJSON(c, &req); err != nil {
-		if fields, ok := request.AsValidationErrors(err); ok {
-			response.FailValidation(c, fields)
-			return
-		}
-		response.Fail(c, http.StatusBadRequest, response.CodeJSONFormatInvalid,
-			"Request body must be valid JSON")
+	if !request.BindJSON(c, &req) {
 		return
 	}
 
@@ -47,13 +41,7 @@ func (h *Handler) Signup(c *gin.Context) {
 
 func (h *Handler) Login(c *gin.Context) {
 	var req LoginRequest
-	if err := request.ShouldBindJSON(c, &req); err != nil {
-		if fields, ok := request.AsValidationErrors(err); ok {
-			response.FailValidation(c, fields)
-			return
-		}
-		response.Fail(c, http.StatusBadRequest, response.CodeJSONFormatInvalid,
-			"Request body must be valid JSON")
+	if !request.BindJSON(c, &req) {
 		return
 	}
 
