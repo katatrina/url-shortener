@@ -2,7 +2,7 @@ package user
 
 type SignupRequest struct {
 	Email    string `json:"email"    validate:"required,email" normalize:"trim,lower"`
-	Password string `json:"password" validate:"required,min=8,max=32,max_bytes=72,strong_password"`
+	Password string `json:"password" validate:"required,min=8,max=32,max_bytes=72"`
 }
 
 type LoginRequest struct {

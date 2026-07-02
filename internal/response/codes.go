@@ -18,6 +18,6 @@ const (
 	FieldCodeInvalidFormat FieldErrorCode = "INVALID_FORMAT"
 	FieldCodeTooShort      FieldErrorCode = "TOO_SHORT"
 	FieldCodeTooLong       FieldErrorCode = "TOO_LONG"
-	FieldCodeWeakPassword  FieldErrorCode = "WEAK_PASSWORD"
-	FieldCodeInvalid       FieldErrorCode = "INVALID"
+	// FieldCodeWeakPassword  FieldErrorCode = "WEAK_PASSWORD" // disabled: relaxed password policy
+	FieldCodeInvalid FieldErrorCode = "INVALID"
 )
