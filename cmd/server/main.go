@@ -62,8 +62,8 @@ func run() error {
 		Addr:    ":8080",
 		Handler: r,
 
-		// Thời gian tối đa server chờ đọc xong header từ client,
-		// chống client gửi header nhỏ giọt (Slowloris kinh điển).
+		// Max time the server waits to finish reading request headers,
+		// guarding against clients that trickle headers (classic Slowloris).
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

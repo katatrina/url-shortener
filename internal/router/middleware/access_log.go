@@ -14,7 +14,7 @@ func AccessLog() gin.HandlerFunc {
 		path := c.Request.URL.Path
 		query := c.Request.URL.RawQuery
 
-		c.Next() // ──── toàn bộ phần còn lại của request chạy sau dòng này ────
+		c.Next() // ──── the rest of the request runs past this line ────
 
 		ctx := c.Request.Context()
 		status := c.Writer.Status()
