@@ -1,7 +1,6 @@
 package link
 
 import (
-	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -18,10 +17,10 @@ func NewHandler(svc *Service) *Handler {
 	return &Handler{linkSvc: svc}
 }
 
-func (h *Handler) CreateLink(c *gin.Context) {
+func (h *Handler) CreateLink(c *gin.Context) error {
 	var req CreateLinkRequest
-	if !request.BindJSON(c, &req) {
-		return
+	if err := request.ShouldBindJSON(c, &req); err != nil {
+		return err
 	}
 
 	created, err := h.linkSvc.CreateLink(c.Request.Context(), CreateLinkParams{
@@ -30,10 +29,8 @@ func (h *Handler) CreateLink(c *gin.Context) {
 		Title:          req.Title,
 	})
 	if err != nil {
-		slog.ErrorContext(c.Request.Context(), "failed to create link", "error", err)
-		response.Internal(c)
-		return
+		return err
 	}
 
-	response.Success(c, http.StatusCreated, newLinkResponse(created))
+	return response.Success(c, http.StatusCreated, newLinkResponse(created))
 }

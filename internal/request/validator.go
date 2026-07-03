@@ -5,10 +5,9 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	// "unicode" // disabled with validateStrongPassword
 
 	"github.com/go-playground/validator/v10"
-	"github.com/katatrina/url-shortener/internal/response"
+	"github.com/katatrina/url-shortener/internal/apperror"
 	"github.com/katatrina/url-shortener/internal/slug"
 )
 
@@ -30,7 +29,7 @@ func init() {
 	_ = validate.RegisterValidation("slug", validateSlug)
 }
 
-// max_bytes: đếm BYTE, không phải rune — bcrypt chỉ dùng 72 byte đầu.
+// max_bytes counts BYTES, not runes — bcrypt only uses the first 72 bytes.
 func validateMaxBytes(fl validator.FieldLevel) bool {
 	limit, err := strconv.Atoi(fl.Param())
 	if err != nil {
@@ -63,14 +62,14 @@ func validateSlug(fl validator.FieldLevel) bool {
 	return slug.IsValid(fl.Field().String())
 }
 
-func AsValidationErrors(err error) ([]response.FieldError, bool) {
+func AsValidationErrors(err error) ([]apperror.FieldError, bool) {
 	var ve validator.ValidationErrors
 	if !errors.As(err, &ve) {
 		return nil, false
 	}
-	out := make([]response.FieldError, 0, len(ve))
+	out := make([]apperror.FieldError, 0, len(ve))
 	for _, e := range ve {
-		out = append(out, response.FieldError{
+		out = append(out, apperror.FieldError{
 			Field:   e.Field(),
 			Code:    mapTag(e.Tag()),
 			Message: messageFor(e),
@@ -79,26 +78,26 @@ func AsValidationErrors(err error) ([]response.FieldError, bool) {
 	return out, true
 }
 
-func mapTag(tag string) response.FieldErrorCode {
+func mapTag(tag string) apperror.FieldErrorCode {
 	switch tag {
 	case "required":
-		return response.FieldCodeRequired
+		return apperror.FieldCodeRequired
 	case "email", "http_url":
-		return response.FieldCodeInvalidFormat
+		return apperror.FieldCodeInvalidFormat
 	case "min", "gte":
-		return response.FieldCodeTooShort
+		return apperror.FieldCodeTooShort
 	case "max", "lte", "max_bytes":
-		return response.FieldCodeTooLong
+		return apperror.FieldCodeTooLong
 	// case "strong_password": // disabled: relaxed password policy
-	// 	return response.FieldCodeWeakPassword
+	// 	return apperror.FieldCodeWeakPassword
 	case "slug":
-		return response.FieldCodeInvalid
+		return apperror.FieldCodeInvalid
 	default:
-		return response.FieldCodeInvalid
+		return apperror.FieldCodeInvalid
 	}
 }
 
-// G101 false positive: đây là template thông báo lỗi, không phải credential.
+// G101 false positive: these are error message templates, not credentials.
 //
 //nolint:gosec
 var messages = map[string]string{

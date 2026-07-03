@@ -1,8 +1,6 @@
 package user
 
 import (
-	"errors"
-	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -18,46 +16,32 @@ func NewHandler(svc *Service) *Handler {
 	return &Handler{userSvc: svc}
 }
 
-func (h *Handler) Signup(c *gin.Context) {
+func (h *Handler) Signup(c *gin.Context) error {
 	var req SignupRequest
-	if !request.BindJSON(c, &req) {
-		return
+	if err := request.ShouldBindJSON(c, &req); err != nil {
+		return err
 	}
 
 	user, err := h.userSvc.Signup(c.Request.Context(), SignupParams(req))
 	if err != nil {
-		switch {
-		case errors.Is(err, ErrEmailExists):
-			response.Fail(c, http.StatusConflict, response.CodeEmailAlreadyExists, "Email already exists")
-		default:
-			slog.ErrorContext(c.Request.Context(), "signup failed", "error", err)
-			response.Internal(c)
-		}
-		return
+		return err
 	}
 
-	response.Success(c, http.StatusCreated, newUserResponse(user))
+	return response.Success(c, http.StatusCreated, newUserResponse(user))
 }
 
-func (h *Handler) Login(c *gin.Context) {
+func (h *Handler) Login(c *gin.Context) error {
 	var req LoginRequest
-	if !request.BindJSON(c, &req) {
-		return
+	if err := request.ShouldBindJSON(c, &req); err != nil {
+		return err
 	}
 
 	result, err := h.userSvc.Login(c.Request.Context(), LoginParams(req))
 	if err != nil {
-		switch {
-		case errors.Is(err, ErrCredentialsIncorrect):
-			response.Fail(c, http.StatusUnauthorized, response.CodeCredentialsIncorrect, "Incorrect email or password")
-		default:
-			slog.ErrorContext(c.Request.Context(), "failed to login", "error", err)
-			response.Internal(c)
-		}
-		return
+		return err
 	}
 
-	response.Success(c, http.StatusOK, LoginResponse{
+	return response.Success(c, http.StatusOK, LoginResponse{
 		AccessToken:          result.AccessToken,
 		AccessTokenExpiresAt: result.AccessTokenExpiresAt.Unix(),
 		User:                 newUserResponse(result.User),

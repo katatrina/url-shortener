@@ -19,21 +19,21 @@ func New(
 
 	r.Use(middleware.RequestID())
 	r.Use(middleware.AccessLog())
-	r.Use(middleware.CORS("http://localhost:5173")) // TODO: đẩy danh sách origin vào config thay vì hardcode.
+	r.Use(middleware.CORS("http://localhost:5173")) // TODO: move allowed origins into config instead of hardcoding.
 	r.Use(middleware.Recovery())
 
 	v1 := r.Group("/v1")
 
 	auth := v1.Group("/auth")
 	{
-		auth.POST("/signup", userHandler.Signup)
-		auth.POST("/login", userHandler.Login)
+		auth.POST("/signup", wrap(userHandler.Signup))
+		auth.POST("/login", wrap(userHandler.Login))
 	}
 
 	links := v1.Group("/links")
 	links.Use(middleware.Auth(tokenIssuer))
 	{
-		links.POST("", linkHandler.CreateLink)
+		links.POST("", wrap(linkHandler.CreateLink))
 	}
 
 	return r
