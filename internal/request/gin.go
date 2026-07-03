@@ -40,8 +40,21 @@ func ShouldBindJSON(c *gin.Context, obj any) error {
 	}
 
 	if err := json.Unmarshal(body, obj); err != nil {
+		// Valid JSON but one field has the wrong type (e.g. number into a
+		// string field). encoding/json stops at the first error, so there is
+		// exactly 1 field -> return a field error through the same 422
+		// envelope as validation. Field == "" means a top-level type mismatch
+		// (body is not an object) -> fall through to the generic message.
+		if typeErr, ok := errors.AsType[*json.UnmarshalTypeError](err); ok && typeErr.Field != "" {
+			return apperror.New(http.StatusUnprocessableEntity, apperror.CodeValidationFailed,
+				"Validation failed", apperror.FieldError{
+					Field:   typeErr.Field,
+					Code:    apperror.FieldCodeInvalidFormat,
+					Message: typeErr.Field + " has an invalid type",
+				})
+		}
 		return apperror.New(http.StatusBadRequest, apperror.CodeJSONFormatInvalid,
-			"Request body must be valid JSON")
+			"Request body must be a JSON object")
 	}
 
 	NormalizeStrings(obj)
