@@ -2,7 +2,7 @@
 CREATE TABLE "links"
 (
     "id"              uuid PRIMARY KEY,
-    "owner_id"        uuid        NOT NULL,
+    "user_id"         uuid        NOT NULL,
     "slug"            text UNIQUE NOT NULL,
     "destination_url" text        NOT NULL,
     "title"           text,
@@ -12,7 +12,7 @@ CREATE TABLE "links"
 );
 
 ALTER TABLE "links"
-    ADD FOREIGN KEY ("owner_id") REFERENCES "users" ("id") ON DELETE CASCADE;
+    ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE CASCADE;
 
 -- +goose Down
 DROP TABLE "links";

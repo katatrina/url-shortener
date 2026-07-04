@@ -1,13 +1,19 @@
 package link
 
+import "strings"
+
 type CreateLinkRequest struct {
-	DestinationURL string  `json:"destinationUrl" validate:"required,http_url,max=2048" normalize:"trim"`
-	Title          *string `json:"title" validate:"omitempty,max=255" normalize:"trim"`
+	DestinationURL string  `json:"destinationUrl" validate:"required,http_url,max=2048"`
+	Title          *string `json:"title" validate:"omitempty,max=255"`
+}
+
+func (r *CreateLinkRequest) Normalize() {
+	r.DestinationURL = strings.TrimSpace(r.DestinationURL)
 }
 
 type LinkResponse struct {
 	ID             string  `json:"id"`
-	OwnerID        string  `json:"ownerId"`
+	UserID         string  `json:"userId"`
 	Slug           string  `json:"slug"`
 	DestinationURL string  `json:"destinationUrl"`
 	Title          *string `json:"title"`
@@ -19,7 +25,7 @@ type LinkResponse struct {
 func newLinkResponse(l *Link) LinkResponse {
 	return LinkResponse{
 		ID:             l.ID,
-		OwnerID:        l.OwnerID,
+		UserID:         l.UserID,
 		Slug:           l.Slug,
 		DestinationURL: l.DestinationURL,
 		Title:          l.Title,

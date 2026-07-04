@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/katatrina/url-shortener/internal/slug"
@@ -20,19 +21,19 @@ func NewService(linkRepo *Repository) *Service {
 }
 
 type CreateLinkParams struct {
-	OwnerID        string
+	UserID         string
 	DestinationURL string
 	Title          *string
 }
 
 func (s *Service) CreateLink(ctx context.Context, arg CreateLinkParams) (*Link, error) {
-	for range maxSlugRetries {
+	for n := range maxSlugRetries {
 		generatedSlug := slug.Generate()
 		id, _ := uuid.NewV7()
 
-		link, err := s.linkRepo.Create(ctx, InsertLinkParams{
+		link, err := s.linkRepo.Insert(ctx, InsertLinkParams{
 			ID:             id.String(),
-			OwnerID:        arg.OwnerID,
+			UserID:         arg.UserID,
 			Slug:           generatedSlug,
 			DestinationURL: arg.DestinationURL,
 			Title:          arg.Title,
@@ -40,6 +41,10 @@ func (s *Service) CreateLink(ctx context.Context, arg CreateLinkParams) (*Link, 
 		})
 		if err != nil {
 			if errors.Is(err, ErrSlugExists) {
+				slog.WarnContext(ctx, "slug collision, retrying",
+					slog.String("slug", generatedSlug),
+					slog.Int("attempt", n+1),
+				)
 				continue
 			}
 			return nil, err

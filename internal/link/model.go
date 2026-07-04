@@ -4,7 +4,7 @@ import "time"
 
 type Link struct {
 	ID             string    `db:"id"`
-	OwnerID        string    `db:"owner_id"`
+	UserID         string    `db:"user_id"`
 	Slug           string    `db:"slug"`
 	DestinationURL string    `db:"destination_url"`
 	Title          *string   `db:"title"`

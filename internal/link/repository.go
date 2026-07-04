@@ -19,22 +19,22 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 
 type InsertLinkParams struct {
 	ID             string
-	OwnerID        string
+	UserID         string
 	Slug           string
 	DestinationURL string
 	Title          *string
 	IsCustomSlug   bool
 }
 
-func (r *Repository) Create(ctx context.Context, arg InsertLinkParams) (*Link, error) {
+func (r *Repository) Insert(ctx context.Context, arg InsertLinkParams) (*Link, error) {
 	query := `
-		INSERT INTO links (id, owner_id, slug, destination_url, title, is_custom_slug)
+		INSERT INTO links (id, user_id, slug, destination_url, title, is_custom_slug)
 		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id, owner_id, slug, destination_url, title, is_custom_slug, created_at, updated_at
+		RETURNING id, user_id, slug, destination_url, title, is_custom_slug, created_at, updated_at
 	`
 
 	rows, _ := r.db.Query(ctx, query,
-		arg.ID, arg.OwnerID, arg.Slug, arg.DestinationURL, arg.Title, arg.IsCustomSlug,
+		arg.ID, arg.UserID, arg.Slug, arg.DestinationURL, arg.Title, arg.IsCustomSlug,
 	)
 
 	link, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[Link])

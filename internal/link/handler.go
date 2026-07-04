@@ -1,6 +1,7 @@
 package link
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -23,8 +24,8 @@ func (h *Handler) CreateLink(c *gin.Context) error {
 		return err
 	}
 
-	created, err := h.linkSvc.CreateLink(c.Request.Context(), CreateLinkParams{
-		OwnerID:        middleware.UserID(c),
+	link, err := h.linkSvc.CreateLink(c.Request.Context(), CreateLinkParams{
+		UserID:         middleware.UserID(c),
 		DestinationURL: req.DestinationURL,
 		Title:          req.Title,
 	})
@@ -32,5 +33,11 @@ func (h *Handler) CreateLink(c *gin.Context) error {
 		return err
 	}
 
-	return response.Success(c, http.StatusCreated, newLinkResponse(created))
+	slog.InfoContext(c.Request.Context(), "link created",
+		slog.String("link_id", link.ID),
+		slog.String("slug", link.Slug),
+		slog.String("user_id", link.UserID),
+	)
+
+	return response.Success(c, http.StatusCreated, newLinkResponse(link))
 }
