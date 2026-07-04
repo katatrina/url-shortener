@@ -38,7 +38,7 @@ func (s *Service) Signup(ctx context.Context, arg SignupParams) (*User, error) {
 		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	user, err := s.userRepo.Create(ctx, CreateUserParams{
+	user, err := s.userRepo.Insert(ctx, InsertUserParams{
 		ID:           id.String(),
 		Email:        arg.Email,
 		PasswordHash: string(passwordHash),
