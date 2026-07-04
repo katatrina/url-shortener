@@ -1,6 +1,7 @@
 package user
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -27,6 +28,10 @@ func (h *Handler) Signup(c *gin.Context) error {
 		return err
 	}
 
+	slog.InfoContext(c.Request.Context(), "user signed up",
+		slog.String("user_id", user.ID),
+	)
+
 	return response.Success(c, http.StatusCreated, newUserResponse(user))
 }
 
@@ -40,6 +45,10 @@ func (h *Handler) Login(c *gin.Context) error {
 	if err != nil {
 		return err
 	}
+
+	slog.InfoContext(c.Request.Context(), "user logged in",
+		slog.String("user_id", result.User.ID),
+	)
 
 	return response.Success(c, http.StatusOK, LoginResponse{
 		AccessToken:          result.AccessToken,
