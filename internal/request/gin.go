@@ -57,7 +57,9 @@ func ShouldBindJSON(c *gin.Context, obj any) error {
 			"Request body must be a JSON object")
 	}
 
-	NormalizeStrings(obj)
+	if n, ok := obj.(Normalizer); ok {
+		n.Normalize()
+	}
 
 	if err := validate.Struct(obj); err != nil {
 		if fields, ok := AsValidationErrors(err); ok {
