@@ -15,6 +15,13 @@ func Success(c *gin.Context, status int, data any) error {
 	return nil
 }
 
+// NoContent writes 204 with an empty body, for actions that return no data
+// (delete, logout). It returns an error (always nil) so handlers can `return`.
+func NoContent(c *gin.Context) error {
+	c.Status(http.StatusNoContent)
+	return nil
+}
+
 // Fail writes an *apperror.AppError as a response in the standard envelope.
 func Fail(c *gin.Context, e *apperror.AppError) {
 	c.JSON(e.HTTPStatus, envelope{Error: &errorBody{
