@@ -1,15 +1,11 @@
 package response
 
-type FieldError struct {
-	Field   string         `json:"field"`
-	Code    FieldErrorCode `json:"code"`
-	Message string         `json:"message"`
-}
+import "github.com/katatrina/url-shortener/internal/apperror"
 
 type errorBody struct {
-	Code    ErrorCode    `json:"code"`
-	Message string       `json:"message"`
-	Fields  []FieldError `json:"fields,omitempty"`
+	Code    apperror.ErrorCode    `json:"code"`
+	Message string                `json:"message"`
+	Fields  []apperror.FieldError `json:"fields,omitempty"`
 }
 
 type envelope struct {

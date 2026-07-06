@@ -1,7 +1,6 @@
 package user
 
 import (
-	"errors"
 	"log/slog"
 	"net/http"
 
@@ -18,58 +17,40 @@ func NewHandler(svc *Service) *Handler {
 	return &Handler{userSvc: svc}
 }
 
-func (h *Handler) Signup(c *gin.Context) {
+func (h *Handler) Signup(c *gin.Context) error {
 	var req SignupRequest
 	if err := request.ShouldBindJSON(c, &req); err != nil {
-		if fields, ok := request.AsValidationErrors(err); ok {
-			response.FailValidation(c, fields)
-			return
-		}
-		response.Fail(c, http.StatusBadRequest, response.CodeJSONFormatInvalid,
-			"Request body must be valid JSON")
-		return
+		return err
 	}
 
 	user, err := h.userSvc.Signup(c.Request.Context(), SignupParams(req))
 	if err != nil {
-		switch {
-		case errors.Is(err, ErrEmailAlreadyExists):
-			response.Fail(c, http.StatusConflict, response.CodeEmailAlreadyExists, "Email already exists")
-		default:
-			slog.ErrorContext(c.Request.Context(), "signup failed", "error", err)
-			response.Internal(c)
-		}
-		return
+		return err
 	}
 
-	response.Success(c, http.StatusCreated, newUserResponse(user))
+	slog.InfoContext(c.Request.Context(), "user signed up",
+		slog.String("user_id", user.ID),
+	)
+
+	return response.Success(c, http.StatusCreated, newUserResponse(user))
 }
 
-func (h *Handler) Login(c *gin.Context) {
+func (h *Handler) Login(c *gin.Context) error {
 	var req LoginRequest
 	if err := request.ShouldBindJSON(c, &req); err != nil {
-		if fields, ok := request.AsValidationErrors(err); ok {
-			response.FailValidation(c, fields)
-			return
-		}
-		response.Fail(c, http.StatusBadRequest, response.CodeJSONFormatInvalid,
-			"Request body must be valid JSON")
-		return
+		return err
 	}
 
 	result, err := h.userSvc.Login(c.Request.Context(), LoginParams(req))
 	if err != nil {
-		switch {
-		case errors.Is(err, ErrCredentialsIncorrect):
-			response.Fail(c, http.StatusUnauthorized, response.CodeCredentialsIncorrect, "Incorrect email or password")
-		default:
-			slog.ErrorContext(c.Request.Context(), "failed to login", "error", err)
-			response.Internal(c)
-		}
-		return
+		return err
 	}
 
-	response.Success(c, http.StatusOK, LoginResponse{
+	slog.InfoContext(c.Request.Context(), "user logged in",
+		slog.String("user_id", result.User.ID),
+	)
+
+	return response.Success(c, http.StatusOK, LoginResponse{
 		AccessToken:          result.AccessToken,
 		AccessTokenExpiresAt: result.AccessTokenExpiresAt.Unix(),
 		User:                 newUserResponse(result.User),

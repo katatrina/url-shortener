@@ -13,6 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/katatrina/url-shortener/internal/config"
+	"github.com/katatrina/url-shortener/internal/link"
 	"github.com/katatrina/url-shortener/internal/logger"
 	"github.com/katatrina/url-shortener/internal/router"
 	"github.com/katatrina/url-shortener/internal/token"
@@ -53,15 +54,16 @@ func run() error {
 	tokenIssuer := token.NewIssuer(cfg.JWTSecret, cfg.JWTTTL)
 
 	userHandler := user.NewHandler(user.NewService(user.NewRepository(db), tokenIssuer))
+	linkHandler := link.NewHandler(link.NewService(link.NewRepository(db)))
 
-	r := router.New(userHandler)
+	r := router.New(userHandler, linkHandler, tokenIssuer)
 
 	srv := &http.Server{
 		Addr:    ":8080",
 		Handler: r,
 
-		// Thời gian tối đa server chờ đọc xong header từ client,
-		// chống client gửi header nhỏ giọt (Slowloris kinh điển).
+		// Max time the server waits to finish reading request headers,
+		// guarding against clients that trickle headers (classic Slowloris).
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

@@ -4,23 +4,34 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/katatrina/url-shortener/internal/apperror"
 )
 
-func Success(c *gin.Context, status int, data any) {
+// Success writes a success response in the standard envelope. It returns an
+// error (always nil) so handlers can write `return response.Success(...)`,
+// matching the error-returning handlerFunc signature.
+func Success(c *gin.Context, status int, data any) error {
 	c.JSON(status, envelope{Data: data})
+	return nil
 }
 
-func Fail(c *gin.Context, status int, code ErrorCode, message string) {
-	c.JSON(status, envelope{Error: &errorBody{Code: code, Message: message}})
+// NoContent writes 204 with an empty body, for actions that return no data
+// (delete, logout). It returns an error (always nil) so handlers can `return`.
+func NoContent(c *gin.Context) error {
+	c.Status(http.StatusNoContent)
+	return nil
 }
 
-func FailValidation(c *gin.Context, fields []FieldError) {
-	c.JSON(http.StatusUnprocessableEntity, envelope{Error: &errorBody{
-		Code: CodeValidationFailed, Message: "Validation failed", Fields: fields,
+// Fail writes an *apperror.AppError as a response in the standard envelope.
+func Fail(c *gin.Context, e *apperror.AppError) {
+	c.JSON(e.HTTPStatus, envelope{Error: &errorBody{
+		Code:    e.Code,
+		Message: e.Message,
+		Fields:  e.Fields,
 	}})
 }
 
 func Internal(c *gin.Context) {
-	Fail(c, http.StatusInternalServerError, CodeInternalServerError,
-		"Something went wrong. Please try again later.")
+	Fail(c, apperror.New(http.StatusInternalServerError, apperror.CodeInternalServerError,
+		"Something went wrong. Please try again later."))
 }
