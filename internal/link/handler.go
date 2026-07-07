@@ -1,6 +1,7 @@
 package link
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -40,4 +41,25 @@ func (h *Handler) CreateLink(c *gin.Context) error {
 	)
 
 	return response.Success(c, http.StatusCreated, newLinkResponse(link))
+}
+
+func (h *Handler) Redirect(c *gin.Context) {
+	rawSlug := c.Param("slug")
+
+	link, err := h.linkSvc.ResolveSlug(c.Request.Context(), rawSlug)
+	if err != nil {
+		if errors.Is(err, ErrLinkNotFound) {
+			c.String(http.StatusNotFound, "Link not found")
+			return
+		}
+
+		slog.ErrorContext(c.Request.Context(), "redirect lookup failed",
+			slog.String("slug", rawSlug),
+			slog.Any("error", err),
+		)
+		c.String(http.StatusInternalServerError, "Something went wrong")
+		return
+	}
+
+	c.Redirect(http.StatusFound, link.DestinationURL)
 }
