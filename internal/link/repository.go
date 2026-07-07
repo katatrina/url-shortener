@@ -49,3 +49,22 @@ func (r *Repository) Insert(ctx context.Context, arg InsertLinkParams) (*Link, e
 
 	return &link, nil
 }
+
+func (r *Repository) FindBySlug(ctx context.Context, slug string) (*Link, error) {
+	query := `
+		SELECT id, user_id, slug, destination_url, title, is_custom_slug, created_at, updated_at
+		FROM links
+		WHERE slug = $1
+	`
+
+	rows, _ := r.db.Query(ctx, query, slug)
+	link, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[Link])
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrLinkNotFound
+		}
+		return nil, err
+	}
+
+	return &link, nil
+}

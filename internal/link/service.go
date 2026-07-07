@@ -55,3 +55,7 @@ func (s *Service) CreateLink(ctx context.Context, arg CreateLinkParams) (*Link, 
 
 	return nil, fmt.Errorf("failed to generate a unique slug after %d retries", maxSlugRetries)
 }
+
+func (s *Service) ResolveSlug(ctx context.Context, rawSlug string) (*Link, error) {
+	return s.linkRepo.FindBySlug(ctx, rawSlug)
+}

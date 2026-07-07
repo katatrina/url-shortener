@@ -17,12 +17,16 @@ func New(
 
 	r := gin.New()
 
-	r.Use(middleware.RequestID())
-	r.Use(middleware.AccessLog())
-	r.Use(middleware.CORS("http://localhost:5173")) // TODO: move allowed origins into config instead of hardcoding.
-	r.Use(middleware.Recovery())
+	// Public redirect: slug -> destination. Deliberately minimal (Recovery only).
+	// It's the hottest path, and browser navigation isn't subject to CORS.
+	r.GET("/:slug", middleware.Recovery(), linkHandler.Redirect)
 
+	// Everything under /v1 is the JSON API and gets the full middleware stack.
 	v1 := r.Group("/v1")
+	v1.Use(middleware.RequestID())
+	v1.Use(middleware.AccessLog())
+	v1.Use(middleware.CORS("http://localhost:5173")) // TODO: move allowed origins into config instead of hardcoding.
+	v1.Use(middleware.Recovery())
 
 	auth := v1.Group("/auth")
 	{
