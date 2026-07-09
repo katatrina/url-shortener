@@ -24,9 +24,17 @@ type CreateLinkParams struct {
 	UserID         string
 	DestinationURL string
 	Title          *string
+	Slug           *string
 }
 
 func (s *Service) CreateLink(ctx context.Context, arg CreateLinkParams) (*Link, error) {
+	if arg.Slug != nil {
+		return s.createWithCustomSlug(ctx, arg)
+	}
+	return s.createWithGeneratedSlug(ctx, arg)
+}
+
+func (s *Service) createWithGeneratedSlug(ctx context.Context, arg CreateLinkParams) (*Link, error) {
 	for n := range maxSlugRetries {
 		generatedSlug := slug.Generate()
 		id, _ := uuid.NewV7()
@@ -54,6 +62,18 @@ func (s *Service) CreateLink(ctx context.Context, arg CreateLinkParams) (*Link, 
 	}
 
 	return nil, fmt.Errorf("failed to generate a unique slug after %d retries", maxSlugRetries)
+}
+
+func (s *Service) createWithCustomSlug(ctx context.Context, arg CreateLinkParams) (*Link, error) {
+	id, _ := uuid.NewV7()
+	return s.linkRepo.Insert(ctx, InsertLinkParams{
+		ID:             id.String(),
+		UserID:         arg.UserID,
+		Slug:           *arg.Slug,
+		DestinationURL: arg.DestinationURL,
+		Title:          arg.Title,
+		IsCustomSlug:   true,
+	})
 }
 
 func (s *Service) ResolveSlug(ctx context.Context, rawSlug string) (*Link, error) {

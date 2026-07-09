@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/katatrina/url-shortener/internal/apperror"
+	"github.com/katatrina/url-shortener/internal/link"
 	"github.com/katatrina/url-shortener/internal/response"
 	"github.com/katatrina/url-shortener/internal/user"
 )
@@ -25,22 +26,12 @@ func wrap(h handlerFunc) gin.HandlerFunc {
 	}
 }
 
-// writeError is the ONLY place that maps errors -> HTTP responses.
-// New endpoints with new business errors only need a new case here.
-//
-// It lives in package router (not response) because it must import the
-// domain packages (user, link) to recognize sentinel errors — and domain
-// handlers import response, so putting it there creates an import cycle.
 func writeError(c *gin.Context, err error) {
-	// 1. Transport-layer errors already packaged (binding, validation) -> write as-is.
 	if appErr, ok := errors.AsType[*apperror.AppError](err); ok {
 		response.Fail(c, appErr)
 		return
 	}
 
-	// 2. Sentinel errors from the service layer -> map to status + code here.
-	// Note: link.ErrSlugExists is not mapped here because the service swallows
-	// it in the retry loop; if it escapes, retries are exhausted -> 500 is right.
 	switch {
 	case errors.Is(err, user.ErrEmailExists):
 		response.Fail(c, apperror.New(http.StatusConflict,
@@ -48,9 +39,10 @@ func writeError(c *gin.Context, err error) {
 	case errors.Is(err, user.ErrCredentialsIncorrect):
 		response.Fail(c, apperror.New(http.StatusUnauthorized,
 			apperror.CodeCredentialsIncorrect, "Incorrect email or password"))
+	case errors.Is(err, link.ErrSlugExists):
+		response.Fail(c, apperror.New(http.StatusConflict,
+			apperror.CodeSlugAlreadyExists, "Slug already exists"))
 	default:
-		// 3. Unrecognized -> log server-side, return a generic 500.
-		// NEVER expose err.Error() to the client.
 		slog.ErrorContext(c.Request.Context(), "unexpected error",
 			"method", c.Request.Method,
 			"path", c.Request.URL.Path,

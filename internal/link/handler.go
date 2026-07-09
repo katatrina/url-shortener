@@ -12,11 +12,15 @@ import (
 )
 
 type Handler struct {
-	linkSvc *Service
+	linkSvc      *Service
+	shortURLBase string
 }
 
-func NewHandler(svc *Service) *Handler {
-	return &Handler{linkSvc: svc}
+func NewHandler(svc *Service, shortURLBase string) *Handler {
+	return &Handler{
+		linkSvc:      svc,
+		shortURLBase: shortURLBase,
+	}
 }
 
 func (h *Handler) CreateLink(c *gin.Context) error {
@@ -29,6 +33,7 @@ func (h *Handler) CreateLink(c *gin.Context) error {
 		UserID:         middleware.UserID(c),
 		DestinationURL: req.DestinationURL,
 		Title:          req.Title,
+		Slug:           req.Slug,
 	})
 	if err != nil {
 		return err
@@ -40,7 +45,7 @@ func (h *Handler) CreateLink(c *gin.Context) error {
 		slog.String("user_id", link.UserID),
 	)
 
-	return response.Success(c, http.StatusCreated, newLinkResponse(link))
+	return response.Success(c, http.StatusCreated, newLinkResponse(link, h.shortURLBase))
 }
 
 func (h *Handler) Redirect(c *gin.Context) {
