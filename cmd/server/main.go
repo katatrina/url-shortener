@@ -56,7 +56,7 @@ func run() error {
 	userHandler := user.NewHandler(user.NewService(user.NewRepository(db), tokenIssuer))
 	linkHandler := link.NewHandler(link.NewService(link.NewRepository(db)))
 
-	r := router.New(userHandler, linkHandler, tokenIssuer)
+	r := router.New(cfg, userHandler, linkHandler, tokenIssuer)
 
 	srv := &http.Server{
 		Addr:    ":8080",
