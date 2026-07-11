@@ -12,13 +12,15 @@ package apperror
 type ErrorCode string
 
 const (
-	CodeValidationFailed     ErrorCode = "VALIDATION_FAILED"
 	CodeJSONFormatInvalid    ErrorCode = "INVALID_JSON_FORMAT"
+	CodeValidationFailed     ErrorCode = "VALIDATION_FAILED"
+	CodeResourceNotFound     ErrorCode = "RESOURCE_NOT_FOUND"
 	CodeEmailAlreadyExists   ErrorCode = "EMAIL_ALREADY_EXISTS"
 	CodeInternalServerError  ErrorCode = "INTERNAL_SERVER_ERROR"
 	CodeCredentialsIncorrect ErrorCode = "INCORRECT_CREDENTIALS"
 	CodeUnauthorized         ErrorCode = "UNAUTHORIZED"
 	CodePayloadTooLarge      ErrorCode = "PAYLOAD_TOO_LARGE"
+	CodeSlugAlreadyExists    ErrorCode = "SLUG_ALREADY_EXISTS"
 )
 
 type FieldErrorCode string

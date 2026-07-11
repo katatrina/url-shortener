@@ -33,7 +33,7 @@ func run() error {
 		return fmt.Errorf("load config: %w", err)
 	}
 
-	logger.Setup(cfg)
+	logger.Setup(cfg.LogLevel, cfg.AppEnv.IsProduction())
 	cfg.Log()
 
 	db, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
@@ -54,9 +54,9 @@ func run() error {
 	tokenIssuer := token.NewIssuer(cfg.JWTSecret, cfg.JWTTTL)
 
 	userHandler := user.NewHandler(user.NewService(user.NewRepository(db), tokenIssuer))
-	linkHandler := link.NewHandler(link.NewService(link.NewRepository(db)))
+	linkHandler := link.NewHandler(link.NewService(link.NewRepository(db)), cfg.ShortURLBase)
 
-	r := router.New(userHandler, linkHandler, tokenIssuer)
+	r := router.New(cfg, userHandler, linkHandler, tokenIssuer)
 
 	srv := &http.Server{
 		Addr:    ":8080",

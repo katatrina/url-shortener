@@ -36,6 +36,16 @@ type Config struct {
 	LogLevel    string        `env:"LOG_LEVEL,required"`
 	JWTSecret   string        `env:"JWT_SECRET,required"`
 	JWTTTL      time.Duration `env:"JWT_TTL,required"`
+
+	// ShortURLBase is the public origin short links are built on (scheme + host,
+	// no trailing path), e.g. "https://short.example".
+	ShortURLBase   string   `env:"SHORT_URL_BASE,required"`
+	AllowedOrigins []string `env:"ALLOWED_ORIGINS,required"`
+
+	// RedirectHost is the bare host used to match incoming requests against the
+	// redirect service. Configured separately from ShortURLBase; keep the two in
+	// sync (the host here must equal the host in SHORT_URL_BASE).
+	RedirectHost string `env:"REDIRECT_HOST,required"`
 }
 
 func (c *Config) Validate() error {
@@ -72,8 +82,12 @@ func Load() (*Config, error) {
 }
 
 func (c *Config) Log() {
-	slog.Info("current config",
+	slog.Info("config loaded",
 		"APP_ENV", c.AppEnv,
 		"LOG_LEVEL", c.LogLevel,
+		"SHORT_URL_BASE", c.ShortURLBase,
+		"REDIRECT_HOST", c.RedirectHost,
+		"ALLOWED_ORIGINS", c.AllowedOrigins,
+		"JWT_TTL", c.JWTTTL,
 	)
 }

@@ -1,7 +1,11 @@
 package router
 
 import (
+	"net/http"
+	"strings"
+
 	"github.com/gin-gonic/gin"
+	"github.com/katatrina/url-shortener/internal/config"
 	"github.com/katatrina/url-shortener/internal/link"
 	"github.com/katatrina/url-shortener/internal/router/middleware"
 	"github.com/katatrina/url-shortener/internal/token"
@@ -9,24 +13,46 @@ import (
 )
 
 func New(
+	cfg *config.Config,
+	userHandler *user.Handler,
+	linkHandler *link.Handler,
+	tokenIssuer *token.Issuer,
+) http.Handler {
+	gin.SetMode(gin.ReleaseMode)
+
+	redirect := newRedirectEngine(linkHandler)
+	api := newAPIEngine(cfg, userHandler, linkHandler, tokenIssuer)
+
+	mux := http.NewServeMux()
+	mux.Handle(cfg.RedirectHost+"/", redirect)
+	mux.Handle("/", api)
+
+	return normalizeHost(mux)
+}
+
+func newRedirectEngine(linkHandler *link.Handler) *gin.Engine {
+	r := gin.New()
+	r.Use(middleware.Recovery())
+
+	r.GET("/:slug", linkHandler.Redirect)
+
+	return r
+}
+
+func newAPIEngine(
+	cfg *config.Config,
 	userHandler *user.Handler,
 	linkHandler *link.Handler,
 	tokenIssuer *token.Issuer,
 ) *gin.Engine {
-	gin.SetMode(gin.ReleaseMode)
-
 	r := gin.New()
 
-	// Public redirect: slug -> destination. Deliberately minimal (Recovery only).
-	// It's the hottest path, and browser navigation isn't subject to CORS.
-	r.GET("/:slug", middleware.Recovery(), linkHandler.Redirect)
+	r.Use(middleware.RequestID())
+	r.Use(middleware.AccessLog())
+	r.Use(middleware.CORS(cfg.AllowedOrigins...))
+	r.Use(middleware.Recovery())
 
-	// Everything under /v1 is the JSON API and gets the full middleware stack.
 	v1 := r.Group("/v1")
-	v1.Use(middleware.RequestID())
-	v1.Use(middleware.AccessLog())
-	v1.Use(middleware.CORS("http://localhost:5173")) // TODO: move allowed origins into config instead of hardcoding.
-	v1.Use(middleware.Recovery())
 
 	auth := v1.Group("/auth")
 	{
@@ -41,4 +67,11 @@ func New(
 	}
 
 	return r
+}
+
+func normalizeHost(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Host = strings.ToLower(r.Host)
+		next.ServeHTTP(w, r)
+	})
 }
