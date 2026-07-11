@@ -2,12 +2,11 @@ package router
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/katatrina/url-shortener/internal/apperror"
 	"github.com/katatrina/url-shortener/internal/config"
 	"github.com/katatrina/url-shortener/internal/link"
-	"github.com/katatrina/url-shortener/internal/response"
 	"github.com/katatrina/url-shortener/internal/router/middleware"
 	"github.com/katatrina/url-shortener/internal/token"
 	"github.com/katatrina/url-shortener/internal/user"
@@ -21,14 +20,17 @@ func New(
 ) http.Handler {
 	gin.SetMode(gin.ReleaseMode)
 
-	return &hostRouter{
-		redirectHost: cfg.RedirectHost,
-		redirect:     newRedirectEngine(cfg, linkHandler),
-		api:          newAPIEngine(cfg, userHandler, linkHandler, tokenIssuer),
-	}
+	redirect := newRedirectEngine(linkHandler)
+	api := newAPIEngine(cfg, userHandler, linkHandler, tokenIssuer)
+
+	mux := http.NewServeMux()
+	mux.Handle(cfg.RedirectHost+"/", redirect)
+	mux.Handle("/", api)
+
+	return normalizeHost(mux)
 }
 
-func newRedirectEngine(cfg *config.Config, linkHandler *link.Handler) *gin.Engine {
+func newRedirectEngine(linkHandler *link.Handler) *gin.Engine {
 	r := gin.New()
 	r.Use(middleware.Recovery())
 
@@ -45,26 +47,10 @@ func newAPIEngine(
 ) *gin.Engine {
 	r := gin.New()
 
-	// Cross-cutting middleware at engine root so they also cover preflight
-	// OPTIONS and any unmatched route: those fall to the NoRoute chain, where
-	// group-level middleware does NOT run. Order (outermost first):
-	//   RequestID  -> every log below carries request_id
-	//   AccessLog  -> wraps Recovery so it logs the recovered 500 status
-	//   CORS       -> aborts preflight 204 (still logged, it's inside AccessLog)
-	//   Recovery   -> tightly wraps the business handlers
 	r.Use(middleware.RequestID())
 	r.Use(middleware.AccessLog())
 	r.Use(middleware.CORS(cfg.AllowedOrigins...))
 	r.Use(middleware.Recovery())
-
-	// Unmatched routes -> JSON 404 in the standard envelope (instead of gin's
-	// plain-text default). Runs at the end of the root-middleware chain, so it
-	// still gets request_id, access log, and CORS headers. Genuine preflight is
-	// short-circuited by CORS earlier and never reaches here.
-	r.NoRoute(func(c *gin.Context) {
-		response.Fail(c, apperror.New(http.StatusNotFound,
-			apperror.CodeResourceNotFound, "Resource not found"))
-	})
 
 	v1 := r.Group("/v1")
 
@@ -81,4 +67,11 @@ func newAPIEngine(
 	}
 
 	return r
+}
+
+func normalizeHost(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Host = strings.ToLower(r.Host)
+		next.ServeHTTP(w, r)
+	})
 }
