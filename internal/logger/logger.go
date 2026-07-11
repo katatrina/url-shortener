@@ -5,14 +5,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/katatrina/url-shortener/internal/config"
 	"github.com/lmittmann/tint"
 )
 
 // Setup .
-func Setup(cfg *config.Config) {
+func Setup(level string, production bool) {
 	var logLevel slog.Level
-	switch cfg.LogLevel {
+	switch level {
 	case "debug":
 		logLevel = slog.LevelDebug
 	case "info":
@@ -24,7 +23,7 @@ func Setup(cfg *config.Config) {
 	}
 
 	var handler slog.Handler
-	if cfg.AppEnv.IsProduction() {
+	if production {
 		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 			Level: logLevel,
 		})
