@@ -3,9 +3,7 @@ package config
 import (
 	"fmt"
 	"log/slog"
-	"net/url"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/caarlos0/env/v11"
@@ -40,14 +38,14 @@ type Config struct {
 	JWTTTL      time.Duration `env:"JWT_TTL,required"`
 
 	// ShortURLBase is the public origin short links are built on (scheme + host,
-	// no trailing path), e.g. "https://short.example". It is the single source of
-	// truth: RedirectHost below is derived from it, never configured separately.
+	// no trailing path), e.g. "https://short.example".
 	ShortURLBase   string   `env:"SHORT_URL_BASE,required"`
 	AllowedOrigins []string `env:"ALLOWED_ORIGINS,required"`
 
-	// RedirectHost is the bare, lowercased host used to match incoming requests
-	// against the redirect service. Derived from ShortURLBase in Load.
-	RedirectHost string `env:"-"`
+	// RedirectHost is the bare host used to match incoming requests against the
+	// redirect service. Configured separately from ShortURLBase; keep the two in
+	// sync (the host here must equal the host in SHORT_URL_BASE).
+	RedirectHost string `env:"REDIRECT_HOST,required"`
 }
 
 func (c *Config) Validate() error {
@@ -64,33 +62,6 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-// resolveShortURLBase validates SHORT_URL_BASE as a bare origin (scheme + host,
-// no path/query/fragment) and derives RedirectHost for request routing. Both
-// consumers thus read from one normalized source instead of transforming the
-// raw value independently.
-func (c *Config) resolveShortURLBase() error {
-	c.ShortURLBase = strings.TrimRight(c.ShortURLBase, "/")
-
-	u, err := url.Parse(c.ShortURLBase)
-	if err != nil {
-		return fmt.Errorf("invalid SHORT_URL_BASE %q: %w", c.ShortURLBase, err)
-	}
-
-	if u.Scheme != "http" && u.Scheme != "https" {
-		return fmt.Errorf("SHORT_URL_BASE %q must start with http:// or https://", c.ShortURLBase)
-	}
-	if u.Host == "" {
-		return fmt.Errorf("SHORT_URL_BASE %q is missing a host", c.ShortURLBase)
-	}
-	if u.Path != "" || u.RawQuery != "" || u.Fragment != "" {
-		return fmt.Errorf("SHORT_URL_BASE %q must be a bare origin (no path, query, or fragment)", c.ShortURLBase)
-	}
-
-	c.RedirectHost = strings.ToLower(u.Hostname())
-
-	return nil
-}
-
 func Load() (*Config, error) {
 	if _, err := os.Stat(".env"); err == nil {
 		if err := godotenv.Load(); err != nil {
@@ -103,10 +74,6 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
-	if err := cfg.resolveShortURLBase(); err != nil {
-		return nil, err
-	}
-
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
@@ -115,8 +82,12 @@ func Load() (*Config, error) {
 }
 
 func (c *Config) Log() {
-	slog.Info("current config",
+	slog.Info("config loaded",
 		"APP_ENV", c.AppEnv,
 		"LOG_LEVEL", c.LogLevel,
+		"SHORT_URL_BASE", c.ShortURLBase,
+		"REDIRECT_HOST", c.RedirectHost,
+		"ALLOWED_ORIGINS", c.AllowedOrigins,
+		"JWT_TTL", c.JWTTTL,
 	)
 }
