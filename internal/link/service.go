@@ -79,3 +79,7 @@ func (s *Service) createWithCustomSlug(ctx context.Context, arg CreateLinkParams
 func (s *Service) ResolveSlug(ctx context.Context, rawSlug string) (*Link, error) {
 	return s.linkRepo.FindBySlug(ctx, rawSlug)
 }
+
+func (s *Service) ListLinks(ctx context.Context, userID string) ([]Link, error) {
+	return s.linkRepo.ListByUserID(ctx, userID)
+}

@@ -68,3 +68,12 @@ func (h *Handler) Redirect(c *gin.Context) {
 
 	c.Redirect(http.StatusFound, link.DestinationURL)
 }
+
+func (h *Handler) ListLinks(c *gin.Context) error {
+	links, err := h.linkSvc.ListLinks(c.Request.Context(), middleware.UserID(c))
+	if err != nil {
+		return err
+	}
+
+	return response.Success(c, http.StatusOK, newListLinksResponse(links, h.shortURLBase))
+}

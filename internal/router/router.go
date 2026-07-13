@@ -64,6 +64,7 @@ func newAPIEngine(
 	links.Use(middleware.Auth(tokenIssuer))
 	{
 		links.POST("", wrap(linkHandler.CreateLink))
+		links.GET("", wrap(linkHandler.ListLinks))
 	}
 
 	return r

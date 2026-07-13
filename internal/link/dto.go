@@ -27,6 +27,10 @@ type LinkResponse struct {
 	UpdatedAt      int64   `json:"updatedAt"`
 }
 
+type ListLinksResponse struct {
+	Items []LinkResponse `json:"items"`
+}
+
 func newLinkResponse(l *Link, shortURLBase string) LinkResponse {
 	return LinkResponse{
 		ID:             l.ID,
@@ -39,4 +43,12 @@ func newLinkResponse(l *Link, shortURLBase string) LinkResponse {
 		CreatedAt:      l.CreatedAt.Unix(),
 		UpdatedAt:      l.UpdatedAt.Unix(),
 	}
+}
+
+func newListLinksResponse(links []Link, shortURLBase string) ListLinksResponse {
+	items := make([]LinkResponse, 0, len(links))
+	for i := range links {
+		items = append(items, newLinkResponse(&links[i], shortURLBase))
+	}
+	return ListLinksResponse{Items: items}
 }

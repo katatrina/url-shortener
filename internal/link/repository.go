@@ -68,3 +68,15 @@ func (r *Repository) FindBySlug(ctx context.Context, slug string) (*Link, error)
 
 	return &link, nil
 }
+
+func (r *Repository) ListByUserID(ctx context.Context, userID string) ([]Link, error) {
+	query := `
+		SELECT id, user_id, slug, destination_url, title, is_custom_slug, created_at, updated_at
+		FROM links
+		WHERE user_id = $1
+		ORDER BY created_at DESC
+	`
+
+	rows, _ := r.db.Query(ctx, query, userID)
+	return pgx.CollectRows(rows, pgx.RowToStructByName[Link])
+}
