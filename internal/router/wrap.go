@@ -41,6 +41,9 @@ func writeError(c *gin.Context, err error) {
 	case errors.Is(err, link.ErrLinkQuotaExceeded):
 		response.Fail(c, apperror.New(http.StatusForbidden,
 			apperror.CodeLinkQuotaExceeded, "You have reached your link limit"))
+	case errors.Is(err, link.ErrLinkNotFound):
+		response.Fail(c, apperror.New(http.StatusNotFound,
+			apperror.CodeLinkNotFound, "Link not found"))
 	default:
 		slog.ErrorContext(c.Request.Context(), "unexpected error",
 			"method", c.Request.Method,

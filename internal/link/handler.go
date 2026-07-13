@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/katatrina/url-shortener/internal/request"
 	"github.com/katatrina/url-shortener/internal/response"
 	"github.com/katatrina/url-shortener/internal/router/middleware"
@@ -76,4 +77,18 @@ func (h *Handler) ListLinks(c *gin.Context) error {
 	}
 
 	return response.Success(c, http.StatusOK, newListLinksResponse(links, h.shortURLBase))
+}
+
+func (h *Handler) DeleteLink(c *gin.Context) error {
+	id := c.Param("id")
+
+	if err := uuid.Validate(id); err != nil {
+		return ErrLinkNotFound
+	}
+
+	if err := h.linkSvc.DeleteLink(c.Request.Context(), id, middleware.UserID(c)); err != nil {
+		return err
+	}
+
+	return response.NoContent(c)
 }

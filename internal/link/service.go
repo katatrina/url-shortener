@@ -96,3 +96,7 @@ func (s *Service) ResolveSlug(ctx context.Context, rawSlug string) (*Link, error
 func (s *Service) ListLinks(ctx context.Context, userID string) ([]Link, error) {
 	return s.linkRepo.ListByUserID(ctx, userID)
 }
+
+func (s *Service) DeleteLink(ctx context.Context, id, userID string) error {
+	return s.linkRepo.DeleteByIDAndUserID(ctx, id, userID)
+}
