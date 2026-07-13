@@ -17,8 +17,11 @@ type Service struct {
 	maxLinksPerUser int
 }
 
-func NewService(linkRepo *Repository) *Service {
-	return &Service{linkRepo: linkRepo}
+func NewService(linkRepo *Repository, maxLinksPerUser int) *Service {
+	return &Service{
+		linkRepo:        linkRepo,
+		maxLinksPerUser: maxLinksPerUser,
+	}
 }
 
 type CreateLinkParams struct {
