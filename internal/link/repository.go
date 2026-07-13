@@ -80,3 +80,14 @@ func (r *Repository) ListByUserID(ctx context.Context, userID string) ([]Link, e
 	rows, _ := r.db.Query(ctx, query, userID)
 	return pgx.CollectRows(rows, pgx.RowToStructByName[Link])
 }
+
+func (r *Repository) CountByUserID(ctx context.Context, userID string) (int64, error) {
+	query := `SELECT count(*) FROM links WHERE user_id = $1`
+
+	var count int64
+	if err := r.db.QueryRow(ctx, query, userID).Scan(&count); err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}

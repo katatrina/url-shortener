@@ -21,6 +21,7 @@ const (
 	CodeUnauthorized         ErrorCode = "UNAUTHORIZED"
 	CodePayloadTooLarge      ErrorCode = "PAYLOAD_TOO_LARGE"
 	CodeSlugAlreadyExists    ErrorCode = "SLUG_ALREADY_EXISTS"
+	CodeLinkQuotaExceeded    ErrorCode = "LINK_QUOTA_EXCEEDED"
 )
 
 type FieldErrorCode string

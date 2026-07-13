@@ -46,6 +46,12 @@ type Config struct {
 	// redirect service. Configured separately from ShortURLBase; keep the two in
 	// sync (the host here must equal the host in SHORT_URL_BASE).
 	RedirectHost string `env:"REDIRECT_HOST,required"`
+
+	// MaxLinksPerUser caps how many links a single user may own. It's an
+	// abuse fuse for a public, billing-free service, not a product tier.
+	// Defaulted (not required) because it's a policy knob with an obvious
+	// sane value — a missing value shouldn't stop the app from booting.
+	MaxLinksPerUser int `env:"MAX_LINKS_PER_USER" envDefault:"10"`
 }
 
 func (c *Config) Validate() error {
@@ -57,6 +63,10 @@ func (c *Config) Validate() error {
 	case "debug", "info", "warn", "error":
 	default:
 		return fmt.Errorf("invalid LOG_LEVEL %q", c.LogLevel)
+	}
+
+	if c.MaxLinksPerUser < 1 {
+		return fmt.Errorf("MAX_LINKS_PER_USER must be >= 1, got %d", c.MaxLinksPerUser)
 	}
 
 	return nil
@@ -89,5 +99,6 @@ func (c *Config) Log() {
 		"REDIRECT_HOST", c.RedirectHost,
 		"ALLOWED_ORIGINS", c.AllowedOrigins,
 		"JWT_TTL", c.JWTTTL,
+		"MAX_LINKS_PER_USER", c.MaxLinksPerUser,
 	)
 }

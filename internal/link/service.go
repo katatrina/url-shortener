@@ -13,7 +13,8 @@ import (
 const maxSlugRetries = 3
 
 type Service struct {
-	linkRepo *Repository
+	linkRepo        *Repository
+	maxLinksPerUser int
 }
 
 func NewService(linkRepo *Repository) *Service {
@@ -28,6 +29,15 @@ type CreateLinkParams struct {
 }
 
 func (s *Service) CreateLink(ctx context.Context, arg CreateLinkParams) (*Link, error) {
+	// There is a very little chance of race condition here. But it's fine.
+	count, err := s.linkRepo.CountByUserID(ctx, arg.UserID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to count user links: %w", err)
+	}
+	if count >= int64(s.maxLinksPerUser) {
+		return nil, ErrLinkQuotaExceeded
+	}
+
 	if arg.Slug != nil {
 		return s.createWithCustomSlug(ctx, arg)
 	}

@@ -12,12 +12,8 @@ import (
 	"github.com/katatrina/url-shortener/internal/user"
 )
 
-// handlerFunc is a handler that returns errors instead of writing error
-// responses itself. Success responses are still written by the handler
-// (response.Success).
 type handlerFunc func(c *gin.Context) error
 
-// wrap adapts a handlerFunc to gin.HandlerFunc, routing every error to writeError.
 func wrap(h handlerFunc) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if err := h(c); err != nil {
@@ -42,6 +38,9 @@ func writeError(c *gin.Context, err error) {
 	case errors.Is(err, link.ErrSlugExists):
 		response.Fail(c, apperror.New(http.StatusConflict,
 			apperror.CodeSlugAlreadyExists, "Slug already exists"))
+	case errors.Is(err, link.ErrLinkQuotaExceeded):
+		response.Fail(c, apperror.New(http.StatusForbidden,
+			apperror.CodeLinkQuotaExceeded, "You have reached your link limit"))
 	default:
 		slog.ErrorContext(c.Request.Context(), "unexpected error",
 			"method", c.Request.Method,
