@@ -17,8 +17,11 @@ type Service struct {
 	maxLinksPerUser int
 }
 
-func NewService(linkRepo *Repository) *Service {
-	return &Service{linkRepo: linkRepo}
+func NewService(linkRepo *Repository, maxLinksPerUser int) *Service {
+	return &Service{
+		linkRepo:        linkRepo,
+		maxLinksPerUser: maxLinksPerUser,
+	}
 }
 
 type CreateLinkParams struct {
@@ -92,4 +95,8 @@ func (s *Service) ResolveSlug(ctx context.Context, rawSlug string) (*Link, error
 
 func (s *Service) ListLinks(ctx context.Context, userID string) ([]Link, error) {
 	return s.linkRepo.ListByUserID(ctx, userID)
+}
+
+func (s *Service) DeleteLink(ctx context.Context, id, userID string) error {
+	return s.linkRepo.DeleteByIDAndUserID(ctx, id, userID)
 }

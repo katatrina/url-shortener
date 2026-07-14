@@ -65,6 +65,7 @@ func newAPIEngine(
 	{
 		links.POST("", wrap(linkHandler.CreateLink))
 		links.GET("", wrap(linkHandler.ListLinks))
+		links.DELETE("/:id", wrap(linkHandler.DeleteLink))
 	}
 
 	return r

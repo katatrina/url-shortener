@@ -14,7 +14,6 @@ type ErrorCode string
 const (
 	CodeJSONFormatInvalid    ErrorCode = "INVALID_JSON_FORMAT"
 	CodeValidationFailed     ErrorCode = "VALIDATION_FAILED"
-	CodeResourceNotFound     ErrorCode = "RESOURCE_NOT_FOUND"
 	CodeEmailAlreadyExists   ErrorCode = "EMAIL_ALREADY_EXISTS"
 	CodeInternalServerError  ErrorCode = "INTERNAL_SERVER_ERROR"
 	CodeCredentialsIncorrect ErrorCode = "INCORRECT_CREDENTIALS"
@@ -22,6 +21,7 @@ const (
 	CodePayloadTooLarge      ErrorCode = "PAYLOAD_TOO_LARGE"
 	CodeSlugAlreadyExists    ErrorCode = "SLUG_ALREADY_EXISTS"
 	CodeLinkQuotaExceeded    ErrorCode = "LINK_QUOTA_EXCEEDED"
+	CodeLinkNotFound         ErrorCode = "LINK_NOT_FOUND"
 )
 
 type FieldErrorCode string

@@ -91,3 +91,17 @@ func (r *Repository) CountByUserID(ctx context.Context, userID string) (int64, e
 
 	return count, nil
 }
+
+func (r *Repository) DeleteByIDAndUserID(ctx context.Context, id, userID string) error {
+	query := `DELETE FROM links WHERE id = $1 AND user_id = $2`
+
+	tag, err := r.db.Exec(ctx, query, id, userID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrLinkNotFound
+	}
+
+	return nil
+}
