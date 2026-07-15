@@ -29,7 +29,7 @@ type LoginResponse struct {
 type UserResponse struct {
 	ID        string  `json:"id"`
 	Email     string  `json:"email"`
-	FullName  *string `json:"fullName"`
+	FullName  string  `json:"fullName"`
 	CreatedAt int64   `json:"createdAt"`
 	UpdatedAt int64   `json:"updatedAt"`
 }

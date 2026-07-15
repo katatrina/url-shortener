@@ -5,7 +5,7 @@ CREATE TABLE "links"
     "user_id"         uuid        NOT NULL,
     "slug"            text UNIQUE NOT NULL,
     "destination_url" text        NOT NULL,
-    "title"           text,
+    "title"           text        NOT NULL DEFAULT '',
     "is_custom_slug"  boolean     NOT NULL DEFAULT false,
     "created_at"      timestamptz NOT NULL DEFAULT (now()),
     "updated_at"      timestamptz NOT NULL DEFAULT (now())

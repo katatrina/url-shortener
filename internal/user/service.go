@@ -70,7 +70,11 @@ func (s *Service) Login(ctx context.Context, arg LoginParams) (*LoginResult, err
 		return nil, err
 	}
 
-	if err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(arg.Password)); err != nil {
+	if user.PasswordHash == nil {
+		return nil, fmt.Errorf("user has no password hash")
+	}
+
+	if err = bcrypt.CompareHashAndPassword([]byte(*user.PasswordHash), []byte(arg.Password)); err != nil {
 		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
 			return nil, ErrCredentialsIncorrect
 		}

@@ -27,7 +27,7 @@ func NewService(linkRepo *Repository, maxLinksPerUser int) *Service {
 type CreateLinkParams struct {
 	UserID         string
 	DestinationURL string
-	Title          *string
+	Title          string
 	Slug           *string
 }
 

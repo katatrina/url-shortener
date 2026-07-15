@@ -4,7 +4,7 @@ import "strings"
 
 type CreateLinkRequest struct {
 	DestinationURL string  `json:"destinationUrl" validate:"required,http_url,max=2048"`
-	Title          *string `json:"title" validate:"omitempty,max=255"`
+	Title          string  `json:"title" validate:"omitempty,max=255"`
 	Slug           *string `json:"slug" validate:"omitempty,min=3,max=30,slug"`
 }
 
@@ -21,7 +21,7 @@ type LinkResponse struct {
 	Slug           string  `json:"slug"`
 	ShortURL       string  `json:"shortUrl"`
 	DestinationURL string  `json:"destinationUrl"`
-	Title          *string `json:"title"`
+	Title          string  `json:"title"`
 	IsCustomSlug   bool    `json:"isCustomSlug"`
 	CreatedAt      int64   `json:"createdAt"`
 	UpdatedAt      int64   `json:"updatedAt"`

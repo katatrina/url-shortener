@@ -22,7 +22,7 @@ type InsertLinkParams struct {
 	UserID         string
 	Slug           string
 	DestinationURL string
-	Title          *string
+	Title          string
 	IsCustomSlug   bool
 }
 
