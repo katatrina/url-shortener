@@ -10,6 +10,7 @@ type CreateLinkRequest struct {
 
 func (r *CreateLinkRequest) Normalize() {
 	r.DestinationURL = strings.TrimSpace(r.DestinationURL)
+	r.Title = strings.TrimSpace(r.Title)
 	if r.Slug != nil {
 		r.Slug = new(strings.TrimSpace(*r.Slug))
 	}
