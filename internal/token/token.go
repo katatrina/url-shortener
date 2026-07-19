@@ -28,7 +28,10 @@ func NewIssuer(secret string, ttl time.Duration) *Issuer {
 	}
 }
 
-func (i *Issuer) Issue(userID string) (string, time.Time, error) {
+// Issue returns the signed token and its lifetime. The lifetime is relative
+// on purpose: clients derive their own deadline from it, so a skewed client
+// clock cannot make a valid token look expired (or vice versa).
+func (i *Issuer) Issue(userID string) (string, time.Duration, error) {
 	now := time.Now()
 	expiresAt := now.Add(i.ttl)
 	claims := jwt.RegisteredClaims{
@@ -41,10 +44,10 @@ func (i *Issuer) Issue(userID string) (string, time.Time, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenStr, err := token.SignedString(i.secret)
 	if err != nil {
-		return "", time.Time{}, err
+		return "", 0, err
 	}
 
-	return tokenStr, expiresAt, nil
+	return tokenStr, i.ttl, nil
 }
 
 func (i *Issuer) Verify(tokenStr string) (userID string, err error) {

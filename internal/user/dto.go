@@ -21,17 +21,18 @@ func (r *LoginRequest) Normalize() {
 }
 
 type LoginResponse struct {
-	AccessToken          string       `json:"accessToken"`
-	AccessTokenExpiresAt int64        `json:"accessTokenExpiresAt"`
-	User                 UserResponse `json:"user"`
+	AccessToken string `json:"accessToken"`
+	// ExpiresIn is the token lifetime in seconds (OAuth 2.0 convention).
+	ExpiresIn int64        `json:"expiresIn"`
+	User      UserResponse `json:"user"`
 }
 
 type UserResponse struct {
-	ID        string  `json:"id"`
-	Email     string  `json:"email"`
-	FullName  string  `json:"fullName"`
-	CreatedAt int64   `json:"createdAt"`
-	UpdatedAt int64   `json:"updatedAt"`
+	ID        string `json:"id"`
+	Email     string `json:"email"`
+	FullName  string `json:"fullName"`
+	CreatedAt int64  `json:"createdAt"`
+	UpdatedAt int64  `json:"updatedAt"`
 }
 
 func newUserResponse(u *User) UserResponse {
