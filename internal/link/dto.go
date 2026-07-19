@@ -1,6 +1,9 @@
 package link
 
-import "strings"
+import (
+	"strings"
+	"time"
+)
 
 type CreateLinkRequest struct {
 	DestinationURL string  `json:"destinationUrl" validate:"required,http_url,max=2048"`
@@ -24,8 +27,10 @@ type LinkResponse struct {
 	DestinationURL string `json:"destinationUrl"`
 	Title          string `json:"title"`
 	IsCustomSlug   bool   `json:"isCustomSlug"`
-	CreatedAt      int64  `json:"createdAt"`
-	UpdatedAt      int64  `json:"updatedAt"`
+	// Timestamps marshal as RFC 3339. Forced to UTC so every record ends
+	// in "Z" instead of the connection's local offset.
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 type ListLinksResponse struct {
@@ -59,8 +64,8 @@ func newLinkResponse(l *Link, shortURLBase string) LinkResponse {
 		DestinationURL: l.DestinationURL,
 		Title:          l.Title,
 		IsCustomSlug:   l.IsCustomSlug,
-		CreatedAt:      l.CreatedAt.Unix(),
-		UpdatedAt:      l.UpdatedAt.Unix(),
+		CreatedAt:      l.CreatedAt.UTC(),
+		UpdatedAt:      l.UpdatedAt.UTC(),
 	}
 }
 

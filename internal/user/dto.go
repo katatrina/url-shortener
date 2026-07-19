@@ -1,6 +1,9 @@
 package user
 
-import "strings"
+import (
+	"strings"
+	"time"
+)
 
 type SignupRequest struct {
 	Email    string `json:"email"    validate:"required,email"`
@@ -28,11 +31,13 @@ type LoginResponse struct {
 }
 
 type UserResponse struct {
-	ID        string `json:"id"`
-	Email     string `json:"email"`
-	FullName  string `json:"fullName"`
-	CreatedAt int64  `json:"createdAt"`
-	UpdatedAt int64  `json:"updatedAt"`
+	ID       string `json:"id"`
+	Email    string `json:"email"`
+	FullName string `json:"fullName"`
+	// Timestamps marshal as RFC 3339. Forced to UTC so every record ends
+	// in "Z" instead of the connection's local offset.
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 func newUserResponse(u *User) UserResponse {
@@ -40,7 +45,7 @@ func newUserResponse(u *User) UserResponse {
 		ID:        u.ID,
 		Email:     u.Email,
 		FullName:  u.FullName,
-		CreatedAt: u.CreatedAt.Unix(),
-		UpdatedAt: u.UpdatedAt.Unix(),
+		CreatedAt: u.CreatedAt.UTC(),
+		UpdatedAt: u.UpdatedAt.UTC(),
 	}
 }
