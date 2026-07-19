@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/katatrina/url-shortener/internal/apperror"
 	"github.com/katatrina/url-shortener/internal/request"
 	"github.com/katatrina/url-shortener/internal/response"
 	"github.com/katatrina/url-shortener/internal/router/middleware"
@@ -77,6 +78,36 @@ func (h *Handler) ListLinks(c *gin.Context) error {
 	}
 
 	return response.Success(c, http.StatusOK, newListLinksResponse(links, h.shortURLBase))
+}
+
+func (h *Handler) UpdateLink(c *gin.Context) error {
+	id := c.Param("id")
+
+	if err := uuid.Validate(id); err != nil {
+		return ErrLinkNotFound
+	}
+
+	var req UpdateLinkRequest
+	if err := request.ShouldBindJSON(c, &req); err != nil {
+		return err
+	}
+
+	if req.IsEmpty() {
+		return apperror.New(http.StatusUnprocessableEntity, apperror.CodeValidationFailed,
+			"At least one field must be provided with a non-null value")
+	}
+
+	link, err := h.linkSvc.UpdateLink(c.Request.Context(), UpdateLinkParams{
+		ID:             id,
+		UserID:         middleware.UserID(c),
+		DestinationURL: req.DestinationURL,
+		Title:          req.Title,
+	})
+	if err != nil {
+		return err
+	}
+
+	return response.Success(c, http.StatusOK, newLinkResponse(link, h.shortURLBase))
 }
 
 func (h *Handler) DeleteLink(c *gin.Context) error {

@@ -4,7 +4,7 @@
 //
 // Dependency conventions:
 //   - apperror does NOT import gin or any other package in this project.
-//   - request produces *AppError (binding/validation errors).
+//   - request/handler produces *AppError (binding/validation errors).
 //   - router/writeError maps service-layer sentinel errors -> responses.
 //   - The service layer does NOT use this package — services return sentinel errors only.
 package apperror
