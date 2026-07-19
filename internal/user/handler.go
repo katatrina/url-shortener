@@ -51,8 +51,8 @@ func (h *Handler) Login(c *gin.Context) error {
 	)
 
 	return response.Success(c, http.StatusOK, LoginResponse{
-		AccessToken:          result.AccessToken,
-		AccessTokenExpiresAt: result.AccessTokenExpiresAt.Unix(),
-		User:                 newUserResponse(result.User),
+		AccessToken: result.AccessToken,
+		ExpiresIn:   int64(result.ExpiresIn.Seconds()),
+		User:        newUserResponse(result.User),
 	})
 }

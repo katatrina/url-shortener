@@ -97,6 +97,17 @@ func (s *Service) ListLinks(ctx context.Context, userID string) ([]Link, error) 
 	return s.linkRepo.ListByUserID(ctx, userID)
 }
 
+type UpdateLinkParams struct {
+	ID             string
+	UserID         string
+	DestinationURL *string // nil = unchanged
+	Title          *string // nil = unchanged, "" = clear
+}
+
+func (s *Service) UpdateLink(ctx context.Context, arg UpdateLinkParams) (*Link, error) {
+	return s.linkRepo.Update(ctx, arg)
+}
+
 func (s *Service) DeleteLink(ctx context.Context, id, userID string) error {
 	return s.linkRepo.DeleteByIDAndUserID(ctx, id, userID)
 }

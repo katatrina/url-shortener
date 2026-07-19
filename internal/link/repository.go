@@ -92,6 +92,28 @@ func (r *Repository) CountByUserID(ctx context.Context, userID string) (int64, e
 	return count, nil
 }
 
+func (r *Repository) Update(ctx context.Context, arg UpdateLinkParams) (*Link, error) {
+	query := `
+		UPDATE links
+		SET destination_url = COALESCE($3, destination_url),
+		    title           = COALESCE($4, title),
+		    updated_at      = now()
+		WHERE id = $1 AND user_id = $2
+		RETURNING id, user_id, slug, destination_url, title, is_custom_slug, created_at, updated_at
+	`
+
+	rows, _ := r.db.Query(ctx, query, arg.ID, arg.UserID, arg.DestinationURL, arg.Title)
+	link, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[Link])
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrLinkNotFound
+		}
+		return nil, err
+	}
+
+	return &link, nil
+}
+
 func (r *Repository) DeleteByIDAndUserID(ctx context.Context, id, userID string) error {
 	query := `DELETE FROM links WHERE id = $1 AND user_id = $2`
 

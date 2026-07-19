@@ -56,9 +56,9 @@ type LoginParams struct {
 }
 
 type LoginResult struct {
-	AccessToken          string
-	AccessTokenExpiresAt time.Time
-	User                 *User
+	AccessToken string
+	ExpiresIn   time.Duration
+	User        *User
 }
 
 func (s *Service) Login(ctx context.Context, arg LoginParams) (*LoginResult, error) {
@@ -81,14 +81,14 @@ func (s *Service) Login(ctx context.Context, arg LoginParams) (*LoginResult, err
 		return nil, fmt.Errorf("failed to compare password: %w", err)
 	}
 
-	accessToken, expiresAt, err := s.tokenIssuer.Issue(user.ID)
+	accessToken, expiresIn, err := s.tokenIssuer.Issue(user.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create token: %w", err)
 	}
 
 	return &LoginResult{
-		AccessToken:          accessToken,
-		AccessTokenExpiresAt: expiresAt,
-		User:                 user,
+		AccessToken: accessToken,
+		ExpiresIn:   expiresIn,
+		User:        user,
 	}, nil
 }

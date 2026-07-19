@@ -1,6 +1,9 @@
 package user
 
-import "strings"
+import (
+	"strings"
+	"time"
+)
 
 type SignupRequest struct {
 	Email    string `json:"email"    validate:"required,email"`
@@ -21,17 +24,20 @@ func (r *LoginRequest) Normalize() {
 }
 
 type LoginResponse struct {
-	AccessToken          string       `json:"accessToken"`
-	AccessTokenExpiresAt int64        `json:"accessTokenExpiresAt"`
-	User                 UserResponse `json:"user"`
+	AccessToken string `json:"accessToken"`
+	// ExpiresIn is the token lifetime in seconds (OAuth 2.0 convention).
+	ExpiresIn int64        `json:"expiresIn"`
+	User      UserResponse `json:"user"`
 }
 
 type UserResponse struct {
-	ID        string  `json:"id"`
-	Email     string  `json:"email"`
-	FullName  string  `json:"fullName"`
-	CreatedAt int64   `json:"createdAt"`
-	UpdatedAt int64   `json:"updatedAt"`
+	ID       string `json:"id"`
+	Email    string `json:"email"`
+	FullName string `json:"fullName"`
+	// Timestamps marshal as RFC 3339. Forced to UTC so every record ends
+	// in "Z" instead of the connection's local offset.
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 func newUserResponse(u *User) UserResponse {
@@ -39,7 +45,7 @@ func newUserResponse(u *User) UserResponse {
 		ID:        u.ID,
 		Email:     u.Email,
 		FullName:  u.FullName,
-		CreatedAt: u.CreatedAt.Unix(),
-		UpdatedAt: u.UpdatedAt.Unix(),
+		CreatedAt: u.CreatedAt.UTC(),
+		UpdatedAt: u.UpdatedAt.UTC(),
 	}
 }
