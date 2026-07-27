@@ -47,6 +47,12 @@ type Config struct {
 	// sync (the host here must equal the host in SHORT_URL_BASE).
 	RedirectHost string `env:"REDIRECT_HOST,required"`
 
+	// TrustedPlatform names the header the hosting platform's edge proxy sets
+	// with the real client IP (e.g. "Fly-Client-IP" on Fly.io). When set, Gin
+	// reads ClientIP from it instead of the client-spoofable X-Forwarded-For
+	// chain. Left empty in local/dev where no trusted proxy sits in front.
+	TrustedPlatform string `env:"TRUSTED_PLATFORM"`
+
 	// MaxLinksPerUser caps how many links a single user may own. It's an
 	// abuse fuse for a public, billing-free service, not a product tier.
 	// Defaulted (not required) because it's a policy knob with an obvious
@@ -97,6 +103,7 @@ func (c *Config) Log() {
 		"LOG_LEVEL", c.LogLevel,
 		"SHORT_URL_BASE", c.ShortURLBase,
 		"REDIRECT_HOST", c.RedirectHost,
+		"TRUSTED_PLATFORM", c.TrustedPlatform,
 		"ALLOWED_ORIGINS", c.AllowedOrigins,
 		"JWT_TTL", c.JWTTTL,
 		"MAX_LINKS_PER_USER", c.MaxLinksPerUser,

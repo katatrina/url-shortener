@@ -20,7 +20,7 @@ func New(
 ) http.Handler {
 	gin.SetMode(gin.ReleaseMode)
 
-	redirect := newRedirectEngine(linkHandler)
+	redirect := newRedirectEngine(cfg, linkHandler)
 	api := newAPIEngine(cfg, userHandler, linkHandler, tokenIssuer)
 
 	mux := http.NewServeMux()
@@ -30,8 +30,9 @@ func New(
 	return normalizeHost(mux)
 }
 
-func newRedirectEngine(linkHandler *link.Handler) *gin.Engine {
+func newRedirectEngine(cfg *config.Config, linkHandler *link.Handler) *gin.Engine {
 	r := gin.New()
+	r.TrustedPlatform = cfg.TrustedPlatform
 	r.Use(middleware.Recovery())
 
 	r.GET("/:slug", linkHandler.Redirect)
@@ -46,6 +47,7 @@ func newAPIEngine(
 	tokenIssuer *token.Issuer,
 ) *gin.Engine {
 	r := gin.New()
+	r.TrustedPlatform = cfg.TrustedPlatform
 
 	r.Use(middleware.RequestID())
 	r.Use(middleware.AccessLog())
