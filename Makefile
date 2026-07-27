@@ -24,6 +24,10 @@ migrate-down-1:
 migrate-status:
 	goose -dir $(MIGRATIONS_DIR) postgres "$(DATABASE_URL)" status -v
 
+# --- Schema docs ---
+db2dbml:
+	db2dbml postgres "$(DATABASE_URL)" -o docs/schema.dbml
+
 # --- Hạ tầng local ---
 network:
 	docker network inspect url-shortener-network >/dev/null 2>&1 || docker network create url-shortener-network

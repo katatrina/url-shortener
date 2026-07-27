@@ -21,6 +21,9 @@ coverage.*
 .idea/
 .claude/
 
+# Tooling
+dbml-error.log
+
 # OS
 .DS_Store
 Thumbs.db
