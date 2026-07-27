@@ -8,20 +8,27 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/katatrina/url-shortener/internal/apperror"
+	"github.com/katatrina/url-shortener/internal/click"
 	"github.com/katatrina/url-shortener/internal/request"
 	"github.com/katatrina/url-shortener/internal/response"
 	"github.com/katatrina/url-shortener/internal/router/middleware"
 )
 
+type ClickRecorder interface {
+	Record(e click.Event)
+}
+
 type Handler struct {
 	linkSvc      *Service
 	shortURLBase string
+	clicks       ClickRecorder
 }
 
-func NewHandler(svc *Service, shortURLBase string) *Handler {
+func NewHandler(svc *Service, shortURLBase string, clicks ClickRecorder) *Handler {
 	return &Handler{
 		linkSvc:      svc,
 		shortURLBase: shortURLBase,
+		clicks:       clicks,
 	}
 }
 
@@ -69,6 +76,9 @@ func (h *Handler) Redirect(c *gin.Context) {
 	}
 
 	c.Redirect(http.StatusFound, link.DestinationURL)
+
+	e := click.NewEvent(link.ID, c.ClientIP(), c.Request.Referer())
+	h.clicks.Record(e)
 }
 
 func (h *Handler) ListLinks(c *gin.Context) error {
