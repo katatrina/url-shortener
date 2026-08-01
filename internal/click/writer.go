@@ -32,38 +32,36 @@ func (w *Writer) WriteBatch(ctx context.Context, events []Event) error {
 
 	ids := make([]string, len(events))
 	linkIDs := make([]string, len(events))
-	clickedAt := make([]time.Time, len(events))
+	clickedAts := make([]time.Time, len(events))
 	ips := make([]*netip.Addr, len(events))
 	referrers := make([]*string, len(events))
-	countries := make([]*string, len(events))
+	countryCodes := make([]*string, len(events))
 
 	for i := range events {
-		e := events[i]
+		e := &events[i]
 
 		ids[i] = e.ID
 		linkIDs[i] = e.LinkID
-		clickedAt[i] = e.ClickedAt
+		clickedAts[i] = e.ClickedAt
 
-		// Parse at the DB boundary: an empty or malformed IP becomes NULL
-		// rather than failing the inet cast and taking the whole batch down.
-		if addr, err := netip.ParseAddr(e.IP); err == nil {
-			ips[i] = &addr
+		if e.IP.IsValid() {
+			ips[i] = &e.IP
 		}
 		if e.Referrer != "" {
 			referrers[i] = &e.Referrer
 		}
 		if e.CountryCode != "" {
-			countries[i] = &e.CountryCode
+			countryCodes[i] = &e.CountryCode
 		}
 	}
 
-	tag, err := w.db.Exec(ctx, insertClicks, ids, linkIDs, clickedAt, ips, referrers, countries)
+	tag, err := w.db.Exec(ctx, insertClicks, ids, linkIDs, clickedAts, ips, referrers, countryCodes)
 	if err != nil {
 		return err
 	}
 
 	if skipped := len(events) - int(tag.RowsAffected()); skipped > 0 {
-		slog.Warn("click events discarded: link no longer exists",
+		slog.Warn("click events not inserted",
 			slog.Int("count", skipped),
 		)
 	}

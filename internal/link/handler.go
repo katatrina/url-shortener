@@ -57,30 +57,6 @@ func (h *Handler) CreateLink(c *gin.Context) error {
 	return response.Success(c, http.StatusCreated, newLinkResponse(link, h.shortURLBase))
 }
 
-func (h *Handler) Redirect(c *gin.Context) {
-	rawSlug := c.Param("slug")
-
-	link, err := h.linkSvc.ResolveSlug(c.Request.Context(), rawSlug)
-	if err != nil {
-		if errors.Is(err, ErrLinkNotFound) {
-			c.String(http.StatusNotFound, "Link not found")
-			return
-		}
-
-		slog.ErrorContext(c.Request.Context(), "redirect lookup failed",
-			slog.String("slug", rawSlug),
-			slog.Any("error", err),
-		)
-		c.String(http.StatusInternalServerError, "Something went wrong")
-		return
-	}
-
-	c.Redirect(http.StatusFound, link.DestinationURL)
-
-	e := click.NewEvent(link.ID, c.ClientIP(), c.Request.Referer())
-	h.clicks.Record(e)
-}
-
 func (h *Handler) ListLinks(c *gin.Context) error {
 	links, err := h.linkSvc.ListLinks(c.Request.Context(), middleware.UserID(c))
 	if err != nil {
@@ -132,4 +108,28 @@ func (h *Handler) DeleteLink(c *gin.Context) error {
 	}
 
 	return response.NoContent(c)
+}
+
+func (h *Handler) Redirect(c *gin.Context) {
+	rawSlug := c.Param("slug")
+
+	link, err := h.linkSvc.ResolveSlug(c.Request.Context(), rawSlug)
+	if err != nil {
+		if errors.Is(err, ErrLinkNotFound) {
+			c.String(http.StatusNotFound, "Link not found")
+			return
+		}
+
+		slog.ErrorContext(c.Request.Context(), "redirect lookup failed",
+			slog.String("slug", rawSlug),
+			slog.Any("error", err),
+		)
+		c.String(http.StatusInternalServerError, "Something went wrong")
+		return
+	}
+
+	c.Redirect(http.StatusFound, link.DestinationURL)
+
+	e := click.NewEvent(link.ID, c.ClientIP(), c.Request.Referer())
+	h.clicks.Record(e)
 }

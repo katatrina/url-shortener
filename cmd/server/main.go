@@ -12,12 +12,23 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/katatrina/url-shortener/internal/click"
 	"github.com/katatrina/url-shortener/internal/config"
 	"github.com/katatrina/url-shortener/internal/link"
 	"github.com/katatrina/url-shortener/internal/logger"
 	"github.com/katatrina/url-shortener/internal/router"
 	"github.com/katatrina/url-shortener/internal/token"
 	"github.com/katatrina/url-shortener/internal/user"
+)
+
+const (
+	clickBufferSize    = 1024
+	clickBatchSize     = 100
+	clickFlushInterval = 5 * time.Second
+
+	// geoipDBPath is where `make geoip` downloads the DB-IP country database.
+	// A missing file disables country resolution (NoopResolver); the app still boots.
+	geoipDBPath = "geoip/dbip-country-lite.mmdb"
 )
 
 func main() {
@@ -54,7 +65,35 @@ func run() error {
 	tokenIssuer := token.NewIssuer(cfg.JWTSecret, cfg.JWTTTL)
 
 	userHandler := user.NewHandler(user.NewService(user.NewRepository(db), tokenIssuer))
-	linkHandler := link.NewHandler(link.NewService(link.NewRepository(db), cfg.MaxLinksPerUser), cfg.ShortURLBase)
+
+	clickResolver := click.CountryResolver(click.NoopResolver{})
+	if geo, err := click.NewMMDBResolver(geoipDBPath); err != nil {
+		slog.Warn("geoip disabled: cannot open database",
+			slog.String("path", geoipDBPath),
+			slog.Any("error", err),
+		)
+	} else {
+		clickResolver = geo
+		defer func() {
+			if err := geo.Close(); err != nil {
+				slog.Warn("closing geoip database failed", slog.Any("error", err))
+			}
+		}()
+		slog.Info("geoip enabled", "path", geoipDBPath)
+	}
+
+	clickPipeline := click.NewPipeline(click.NewWriter(db), clickResolver,
+		clickBufferSize, clickBatchSize, clickFlushInterval)
+
+	pipelineCtx, stopPipeline := context.WithCancel(context.Background())
+	defer stopPipeline()
+	pipelineDone := make(chan struct{})
+	go func() {
+		clickPipeline.Run(pipelineCtx)
+		close(pipelineDone)
+	}()
+
+	linkHandler := link.NewHandler(link.NewService(link.NewRepository(db), cfg.MaxLinksPerUser), cfg.ShortURLBase, clickPipeline)
 
 	r := router.New(cfg, userHandler, linkHandler, tokenIssuer)
 
@@ -95,6 +134,13 @@ func run() error {
 	} else {
 		slog.Info("server stopped")
 	}
+
+	// The server no longer accepts requests, so no new click events will be
+	// enqueued. Drain what's buffered before the deferred db pool close runs.
+	slog.Info("draining click pipeline...")
+	stopPipeline()
+	<-pipelineDone
+	slog.Info("click pipeline drained")
 
 	return nil
 }

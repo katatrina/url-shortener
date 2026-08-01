@@ -3,6 +3,7 @@ package click
 import (
 	"context"
 	"log/slog"
+	"net/netip"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -11,9 +12,9 @@ import (
 )
 
 const (
-	DefaultBufferSize     = 1024
-	DefaultFlushBatchSize = 100
-	DefaultFlushInterval  = 5 * time.Second
+	//DefaultBufferSize     = 1024
+	//DefaultFlushBatchSize = 100
+	//DefaultFlushInterval  = 5 * time.Second
 
 	flushTimeout   = 10 * time.Second
 	maxReferrerLen = 2048
@@ -24,19 +25,21 @@ type Event struct {
 	LinkID    string
 	ClickedAt time.Time
 
-	IP          string
+	IP          netip.Addr
 	Referrer    string
 	CountryCode string
 }
 
 func NewEvent(linkID string, ip string, referrer string) Event {
 	id, _ := uuid.NewV7()
+	addr, _ := netip.ParseAddr(ip)
+	addr = addr.Unmap()
 
 	return Event{
 		ID:        id.String(),
 		LinkID:    linkID,
 		ClickedAt: time.Now(),
-		IP:        ip,
+		IP:        addr,
 		Referrer:  referrer,
 	}
 }
@@ -46,25 +49,26 @@ type BatchWriter interface {
 }
 
 type CountryResolver interface {
-	CountryCode(ip string) string
+	CountryCode(ip netip.Addr) string
 }
 
 type Pipeline struct {
-	events          chan Event
-	writer          BatchWriter
-	countryResolver CountryResolver
-	batchSize       int
-	interval        time.Duration
-	dropped         atomic.Uint64
+	events      chan Event
+	writer      BatchWriter
+	resolver    CountryResolver
+	batchSize   int
+	interval    time.Duration
+	dropped     atomic.Uint64
+	writeFailed atomic.Uint64
 }
 
-func NewPipeline(w BatchWriter, cr CountryResolver, bufferSize, batchSize int, interval time.Duration) *Pipeline {
+func NewPipeline(w BatchWriter, r CountryResolver, bufferSize, batchSize int, interval time.Duration) *Pipeline {
 	return &Pipeline{
-		events:          make(chan Event, bufferSize),
-		writer:          w,
-		countryResolver: cr,
-		batchSize:       batchSize,
-		interval:        interval,
+		events:    make(chan Event, bufferSize),
+		writer:    w,
+		resolver:  r,
+		batchSize: batchSize,
+		interval:  interval,
 	}
 }
 
@@ -78,10 +82,6 @@ func (p *Pipeline) Record(e Event) {
 			slog.Uint64("dropped_total", p.dropped.Load()),
 		)
 	}
-}
-
-func (p *Pipeline) Dropped() uint64 {
-	return p.dropped.Load()
 }
 
 func (p *Pipeline) Run(ctx context.Context) {
@@ -114,18 +114,21 @@ func (p *Pipeline) flush(batch *[]Event) {
 		e := &events[i]
 
 		if len(e.Referrer) > maxReferrerLen {
-			e.Referrer = strings.ToValidUTF8(e.Referrer[:maxReferrerLen], "")
+			e.Referrer = e.Referrer[:maxReferrerLen]
 		}
+		e.Referrer = strings.ToValidUTF8(e.Referrer, "")
 
-		e.CountryCode = p.countryResolver.CountryCode(e.IP)
+		e.CountryCode = p.resolver.CountryCode(e.IP)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), flushTimeout)
 	defer cancel()
 
 	if err := p.writer.WriteBatch(ctx, events); err != nil {
+		p.writeFailed.Add(uint64(len(events)))
 		slog.Error("click batch write failed",
 			slog.Int("count", len(events)),
+			slog.Uint64("failed_total", p.writeFailed.Load()),
 			slog.Any("error", err))
 	}
 

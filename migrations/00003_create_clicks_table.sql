@@ -1,5 +1,5 @@
 -- +goose Up
--- Append-only click event log
+-- Append-only click event
 CREATE TABLE "clicks"
 (
     "id"           uuid PRIMARY KEY,
