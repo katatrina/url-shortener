@@ -26,8 +26,6 @@ const (
 	clickBatchSize     = 100
 	clickFlushInterval = 5 * time.Second
 
-	// geoipDBPath is where `make geoip` downloads the DB-IP country database.
-	// A missing file disables country resolution (NoopResolver); the app still boots.
 	geoipDBPath = "geoip/dbip-country-lite.mmdb"
 )
 
@@ -62,18 +60,14 @@ func run() error {
 	}
 	slog.Info("connected to db")
 
-	tokenIssuer := token.NewIssuer(cfg.JWTSecret, cfg.JWTTTL)
-
-	userHandler := user.NewHandler(user.NewService(user.NewRepository(db), tokenIssuer))
-
-	clickResolver := click.CountryResolver(click.NoopResolver{})
+	countryResolver := click.CountryResolver(click.NoopResolver{})
 	if geo, err := click.NewMMDBResolver(geoipDBPath); err != nil {
 		slog.Warn("geoip disabled: cannot open database",
 			slog.String("path", geoipDBPath),
 			slog.Any("error", err),
 		)
 	} else {
-		clickResolver = geo
+		countryResolver = geo
 		defer func() {
 			if err := geo.Close(); err != nil {
 				slog.Warn("closing geoip database failed", slog.Any("error", err))
@@ -82,7 +76,7 @@ func run() error {
 		slog.Info("geoip enabled", "path", geoipDBPath)
 	}
 
-	clickPipeline := click.NewPipeline(click.NewWriter(db), clickResolver,
+	clickPipeline := click.NewPipeline(click.NewWriter(db), countryResolver,
 		clickBufferSize, clickBatchSize, clickFlushInterval)
 
 	pipelineCtx, stopPipeline := context.WithCancel(context.Background())
@@ -93,6 +87,8 @@ func run() error {
 		close(pipelineDone)
 	}()
 
+	tokenIssuer := token.NewIssuer(cfg.JWTSecret, cfg.JWTTTL)
+	userHandler := user.NewHandler(user.NewService(user.NewRepository(db), tokenIssuer))
 	linkHandler := link.NewHandler(link.NewService(link.NewRepository(db), cfg.MaxLinksPerUser), cfg.ShortURLBase, clickPipeline)
 
 	r := router.New(cfg, userHandler, linkHandler, tokenIssuer)
@@ -101,8 +97,6 @@ func run() error {
 		Addr:    ":8080",
 		Handler: r,
 
-		// Max time the server waits to finish reading request headers,
-		// guarding against clients that trickle headers (classic Slowloris).
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
@@ -129,14 +123,11 @@ func run() error {
 	defer cancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		_ = srv.Close()
 		slog.Warn("graceful shutdown failed", "error", err)
 	} else {
 		slog.Info("server stopped")
 	}
 
-	// The server no longer accepts requests, so no new click events will be
-	// enqueued. Drain what's buffered before the deferred db pool close runs.
 	slog.Info("draining click pipeline...")
 	stopPipeline()
 	<-pipelineDone
