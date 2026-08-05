@@ -32,6 +32,7 @@ Table "clicks" {
   "ip_address" inet
   "referrer" text
   "country_code" text
+  "referrer_host" text
 }
 
 Ref "clicks_link_id_fkey":"links"."id" < "clicks"."link_id" [delete: cascade]

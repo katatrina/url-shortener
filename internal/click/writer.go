@@ -10,10 +10,10 @@ import (
 )
 
 const insertClicks = `
-	INSERT INTO clicks (id, link_id, clicked_at, ip_address, referrer, country_code)
-	SELECT u.id, u.link_id, u.clicked_at, u.ip, u.referrer, u.country
-	FROM unnest($1::uuid[], $2::uuid[], $3::timestamptz[], $4::inet[], $5::text[], $6::text[])
-		AS u(id, link_id, clicked_at, ip, referrer, country)
+	INSERT INTO clicks (id, link_id, clicked_at, ip_address, referrer, referrer_host, country_code)
+	SELECT u.id, u.link_id, u.clicked_at, u.ip, u.referrer, u.referrer_host, u.country
+	FROM unnest($1::uuid[], $2::uuid[], $3::timestamptz[], $4::inet[], $5::text[], $6::text[], $7::text[])
+	AS u(id, link_id, clicked_at, ip, referrer, referrer_host, country)
 	WHERE EXISTS (SELECT 1 FROM links l WHERE l.id = u.link_id)
 `
 
@@ -35,6 +35,7 @@ func (w *Writer) WriteBatch(ctx context.Context, events []Event) error {
 	clickedAts := make([]time.Time, len(events))
 	ips := make([]*netip.Addr, len(events))
 	referrers := make([]*string, len(events))
+	referrerHosts := make([]*string, len(events))
 	countryCodes := make([]*string, len(events))
 
 	for i := range events {
@@ -50,12 +51,15 @@ func (w *Writer) WriteBatch(ctx context.Context, events []Event) error {
 		if e.Referrer != "" {
 			referrers[i] = &e.Referrer
 		}
+		if e.ReferrerHost != "" {
+			referrerHosts[i] = &e.ReferrerHost
+		}
 		if e.CountryCode != "" {
 			countryCodes[i] = &e.CountryCode
 		}
 	}
 
-	tag, err := w.db.Exec(ctx, insertClicks, ids, linkIDs, clickedAts, ips, referrers, countryCodes)
+	tag, err := w.db.Exec(ctx, insertClicks, ids, linkIDs, clickedAts, ips, referrers, referrerHosts, countryCodes)
 	if err != nil {
 		return err
 	}

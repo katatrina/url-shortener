@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/netip"
+	"net/url"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -12,10 +13,6 @@ import (
 )
 
 const (
-	//DefaultBufferSize     = 1024
-	//DefaultFlushBatchSize = 100
-	//DefaultFlushInterval  = 5 * time.Second
-
 	flushTimeout   = 10 * time.Second
 	maxReferrerLen = 2048
 )
@@ -25,9 +22,10 @@ type Event struct {
 	LinkID    string
 	ClickedAt time.Time
 
-	IP          netip.Addr
-	Referrer    string
-	CountryCode string
+	IP           netip.Addr
+	Referrer     string
+	ReferrerHost string
+	CountryCode  string
 }
 
 func NewEvent(linkID string, ip string, referrer string) Event {
@@ -117,6 +115,7 @@ func (p *Pipeline) flush(batch *[]Event) {
 			e.Referrer = e.Referrer[:maxReferrerLen]
 		}
 		e.Referrer = strings.ToValidUTF8(e.Referrer, "")
+		e.ReferrerHost = referrerHost(e.Referrer)
 
 		e.CountryCode = p.resolver.CountryCode(e.IP)
 	}
@@ -150,4 +149,18 @@ func (p *Pipeline) drain(batch *[]Event) {
 			return
 		}
 	}
+}
+
+func referrerHost(referrer string) string {
+	if referrer == "" {
+		return ""
+	}
+
+	u, err := url.Parse(referrer)
+	if err != nil {
+		return ""
+	}
+
+	host := strings.ToLower(u.Hostname())
+	return strings.TrimPrefix(host, "www.")
 }
