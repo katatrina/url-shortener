@@ -19,16 +19,16 @@ type ClickRecorder interface {
 }
 
 type Handler struct {
-	linkSvc      *Service
-	shortURLBase string
-	clicks       ClickRecorder
+	linkSvc       *Service
+	shortURLBase  string
+	clickRecorder ClickRecorder
 }
 
-func NewHandler(svc *Service, shortURLBase string, clicks ClickRecorder) *Handler {
+func NewHandler(svc *Service, shortURLBase string, clickRecorder ClickRecorder) *Handler {
 	return &Handler{
-		linkSvc:      svc,
-		shortURLBase: shortURLBase,
-		clicks:       clicks,
+		linkSvc:       svc,
+		shortURLBase:  shortURLBase,
+		clickRecorder: clickRecorder,
 	}
 }
 
@@ -56,6 +56,36 @@ func (h *Handler) CreateLink(c *gin.Context) error {
 
 	return response.Success(c, http.StatusCreated, newLinkResponse(link, h.shortURLBase))
 }
+
+//func (h *Handler) GetLink(c *gin.Context) error {
+//	id := c.Param("id")
+//
+//	if err := uuid.Validate(id); err != nil {
+//		return ErrLinkNotFound
+//	}
+//
+//	link, err := h.linkSvc.GetLink(c.Request.Context(), id, middleware.UserID(c))
+//	if err != nil {
+//		return err
+//	}
+//
+//	return response.Success(c, http.StatusOK, newLinkResponse(link, h.shortURLBase))
+//}
+
+//func (h *Handler) GetLinkStats(c *gin.Context) error {
+//	id := c.Param("id")
+//
+//	if err := uuid.Validate(id); err != nil {
+//		return ErrLinkNotFound
+//	}
+//
+//	stats, err := h.linkSvc.GetLinkStats(c.Request.Context(), id, middleware.UserID(c))
+//	if err != nil {
+//		return err
+//	}
+//
+//	return response.Success(c, http.StatusOK, newStatsResponse(stats))
+//}
 
 func (h *Handler) ListLinks(c *gin.Context) error {
 	links, err := h.linkSvc.ListLinks(c.Request.Context(), middleware.UserID(c))
@@ -128,8 +158,9 @@ func (h *Handler) Redirect(c *gin.Context) {
 		return
 	}
 
+	c.Header("Cache-Control", "no-store")
 	c.Redirect(http.StatusFound, link.DestinationURL)
 
 	e := click.NewEvent(link.ID, c.ClientIP(), c.Request.Referer())
-	h.clicks.Record(e)
+	h.clickRecorder.Record(e)
 }
