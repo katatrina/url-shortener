@@ -24,18 +24,15 @@ func (r *LoginRequest) Normalize() {
 }
 
 type LoginResponse struct {
-	AccessToken string `json:"accessToken"`
-	// ExpiresIn is the token lifetime in seconds (OAuth 2.0 convention).
-	ExpiresIn int64        `json:"expiresIn"`
-	User      UserResponse `json:"user"`
+	AccessToken string       `json:"accessToken"`
+	ExpiresIn   int64        `json:"expiresIn"`
+	User        UserResponse `json:"user"`
 }
 
 type UserResponse struct {
-	ID       string `json:"id"`
-	Email    string `json:"email"`
-	FullName string `json:"fullName"`
-	// Timestamps marshal as RFC 3339. Forced to UTC so every record ends
-	// in "Z" instead of the connection's local offset.
+	ID        string    `json:"id"`
+	Email     string    `json:"email"`
+	FullName  string    `json:"fullName"`
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 }

@@ -20,17 +20,15 @@ func (r *CreateLinkRequest) Normalize() {
 }
 
 type LinkResponse struct {
-	ID             string `json:"id"`
-	UserID         string `json:"userId"`
-	Slug           string `json:"slug"`
-	ShortURL       string `json:"shortUrl"`
-	DestinationURL string `json:"destinationUrl"`
-	Title          string `json:"title"`
-	IsCustomSlug   bool   `json:"isCustomSlug"`
-	// Timestamps marshal as RFC 3339. Forced to UTC so every record ends
-	// in "Z" instead of the connection's local offset.
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	ID             string    `json:"id"`
+	UserID         string    `json:"userId"`
+	Slug           string    `json:"slug"`
+	ShortURL       string    `json:"shortUrl"`
+	DestinationURL string    `json:"destinationUrl"`
+	Title          string    `json:"title"`
+	IsCustomSlug   bool      `json:"isCustomSlug"`
+	CreatedAt      time.Time `json:"createdAt"`
+	UpdatedAt      time.Time `json:"updatedAt"`
 }
 
 type ListLinksResponse struct {
