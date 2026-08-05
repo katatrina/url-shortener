@@ -2,8 +2,11 @@ DATABASE_URL ?= postgres://root:secret@localhost:5432/url_shortener?sslmode=disa
 MIGRATIONS_DIR = ./migrations
 
 # --- Dev hằng ngày: chạy thẳng trên máy ---
-server:
+run:
 	go run ./cmd/server
+
+build:
+	go build ./...
 
 lint:
 	golangci-lint run
