@@ -10,8 +10,3 @@ services:
 
     ports:
       - "5432:5432"
-
-networks:
-  default:
-    name: url-shortener-network
-    external: true
