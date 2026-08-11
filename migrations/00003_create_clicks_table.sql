@@ -8,6 +8,7 @@ CREATE TABLE "clicks"
     "ip_address"    inet,
     "referrer"      text,
     "referrer_host" text,
+    "user_agent"    text,
     "country_code"  text
 );
 

@@ -161,6 +161,6 @@ func (h *Handler) Redirect(c *gin.Context) {
 	c.Header("Cache-Control", "no-store")
 	c.Redirect(http.StatusFound, link.DestinationURL)
 
-	e := click.NewEvent(link.ID, c.ClientIP(), c.Request.Referer())
+	e := click.NewEvent(link.ID, c.ClientIP(), c.Request.Referer(), c.Request.UserAgent())
 	h.clickRecorder.Record(e)
 }

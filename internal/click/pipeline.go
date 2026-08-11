@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	flushTimeout   = 10 * time.Second
-	maxReferrerLen = 2048
+	flushTimeout    = 10 * time.Second
+	maxReferrerLen  = 2048
+	maxUserAgentLen = 512
 )
 
 type Event struct {
@@ -25,10 +26,11 @@ type Event struct {
 	IP           netip.Addr
 	Referrer     string
 	ReferrerHost string
+	UserAgent    string
 	CountryCode  string
 }
 
-func NewEvent(linkID string, ip string, referrer string) Event {
+func NewEvent(linkID string, ip string, referrer string, userAgent string) Event {
 	id, _ := uuid.NewV7()
 	addr, _ := netip.ParseAddr(ip)
 	addr = addr.Unmap()
@@ -39,6 +41,7 @@ func NewEvent(linkID string, ip string, referrer string) Event {
 		ClickedAt: time.Now(),
 		IP:        addr,
 		Referrer:  referrer,
+		UserAgent: userAgent,
 	}
 }
 
@@ -116,6 +119,11 @@ func (p *Pipeline) flush(batch *[]Event) {
 		}
 		e.Referrer = strings.ToValidUTF8(e.Referrer, "")
 		e.ReferrerHost = referrerHost(e.Referrer)
+
+		if len(e.UserAgent) > maxUserAgentLen {
+			e.UserAgent = e.UserAgent[:maxUserAgentLen]
+		}
+		e.UserAgent = strings.ToValidUTF8(e.UserAgent, "")
 
 		e.CountryCode = p.resolver.CountryCode(e.IP)
 	}
