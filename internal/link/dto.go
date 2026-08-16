@@ -31,8 +31,14 @@ type LinkResponse struct {
 	UpdatedAt      time.Time `json:"updatedAt"`
 }
 
+type LinkListItemResponse struct {
+	LinkResponse
+	Clicks        int64      `json:"clicks"`
+	LastClickedAt *time.Time `json:"lastClickedAt"`
+}
+
 type ListLinksResponse struct {
-	Items []LinkResponse `json:"items"`
+	Items []LinkListItemResponse `json:"items"`
 }
 
 type UpdateLinkRequest struct {
@@ -67,10 +73,23 @@ func newLinkResponse(l *Link, shortURLBase string) LinkResponse {
 	}
 }
 
-func newListLinksResponse(links []Link, shortURLBase string) ListLinksResponse {
-	items := make([]LinkResponse, 0, len(links))
+func newListLinksResponse(links []LinkListItem, shortURLBase string) ListLinksResponse {
+	items := make([]LinkListItemResponse, 0, len(links))
 	for i := range links {
-		items = append(items, newLinkResponse(&links[i], shortURLBase))
+		l := &links[i]
+
+		items = append(items, LinkListItemResponse{
+			LinkResponse:  newLinkResponse(&l.Link, shortURLBase),
+			Clicks:        l.ClickCount,
+			LastClickedAt: utcPtr(l.LastClickedAt),
+		})
 	}
 	return ListLinksResponse{Items: items}
+}
+
+func utcPtr(t *time.Time) *time.Time {
+	if t == nil {
+		return nil
+	}
+	return new(t.UTC())
 }

@@ -69,16 +69,31 @@ func (r *Repository) FindBySlug(ctx context.Context, slug string) (*Link, error)
 	return &link, nil
 }
 
-func (r *Repository) ListByUserID(ctx context.Context, userID string) ([]Link, error) {
+// ListByUserID returns the user's links with their click totals attached.
+//
+// The LATERAL subquery is evaluated once per link and hits
+// idx_clicks_link_id_clicked_at, so cost scales with the number of links the
+// user owns (capped by MaxLinksPerUser), not with the size of the clicks table.
+// A plain LEFT JOIN on a grouped subquery would aggregate every click in the
+// system before filtering — same result, wrong shape.
+func (r *Repository) ListByUserID(ctx context.Context, userID string) ([]LinkListItem, error) {
 	query := `
-		SELECT id, user_id, slug, destination_url, title, is_custom_slug, created_at, updated_at
-		FROM links
-		WHERE user_id = $1
-		ORDER BY created_at DESC
+		SELECT l.id, l.user_id, l.slug, l.destination_url, l.title, l.is_custom_slug,
+		       l.created_at, l.updated_at,
+		       COALESCE(c.click_count, 0) AS click_count,
+		       c.last_clicked_at
+		FROM links l
+		         LEFT JOIN LATERAL (
+		    SELECT count(*) AS click_count, max(clicked_at) AS last_clicked_at
+		    FROM clicks
+		    WHERE link_id = l.id
+		    ) c ON true
+		WHERE l.user_id = $1
+		ORDER BY l.created_at DESC
 	`
 
 	rows, _ := r.db.Query(ctx, query, userID)
-	return pgx.CollectRows(rows, pgx.RowToStructByName[Link])
+	return pgx.CollectRows(rows, pgx.RowToStructByName[LinkListItem])
 }
 
 func (r *Repository) CountByUserID(ctx context.Context, userID string) (int64, error) {

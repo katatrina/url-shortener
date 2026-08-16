@@ -93,7 +93,7 @@ func (s *Service) ResolveSlug(ctx context.Context, rawSlug string) (*Link, error
 	return s.linkRepo.FindBySlug(ctx, rawSlug)
 }
 
-func (s *Service) ListLinks(ctx context.Context, userID string) ([]Link, error) {
+func (s *Service) ListLinks(ctx context.Context, userID string) ([]LinkListItem, error) {
 	return s.linkRepo.ListByUserID(ctx, userID)
 }
 
