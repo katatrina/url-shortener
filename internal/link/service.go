@@ -5,21 +5,34 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/katatrina/url-shortener/internal/click"
 	"github.com/katatrina/url-shortener/internal/slug"
 )
 
 const maxSlugRetries = 3
 
+// topDimensionLimit caps each top-N breakdown. Ten rows is what a dashboard
+// panel can show without a scrollbar; a long tail of one-click referrers is
+// noise, not insight.
+const topDimensionLimit = 10
+
+type ClickStatsReader interface {
+	LinkStats(ctx context.Context, q click.StatsQuery) (*click.Stats, error)
+}
+
 type Service struct {
 	linkRepo        *Repository
+	clickStats      ClickStatsReader
 	maxLinksPerUser int
 }
 
-func NewService(linkRepo *Repository, maxLinksPerUser int) *Service {
+func NewService(linkRepo *Repository, clickStats ClickStatsReader, maxLinksPerUser int) *Service {
 	return &Service{
 		linkRepo:        linkRepo,
+		clickStats:      clickStats,
 		maxLinksPerUser: maxLinksPerUser,
 	}
 }
@@ -95,6 +108,82 @@ func (s *Service) ResolveSlug(ctx context.Context, rawSlug string) (*Link, error
 
 func (s *Service) ListLinks(ctx context.Context, userID string) ([]LinkListItem, error) {
 	return s.linkRepo.ListByUserID(ctx, userID)
+}
+
+type GetLinkStatsParams struct {
+	LinkID   string
+	UserID   string
+	Range    string
+	Location *time.Location
+}
+
+// LinkStats is everything the analytics screen renders in one shot.
+type LinkStats struct {
+	Link  *Link
+	From  time.Time
+	To    time.Time
+	Stats *click.Stats
+}
+
+func (s *Service) GetLinkStats(ctx context.Context, arg GetLinkStatsParams) (*LinkStats, error) {
+	link, err := s.linkRepo.FindByIDAndUserID(ctx, arg.LinkID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	from, bucket, ok := statsWindow(arg.Range, arg.Location)
+	if !ok {
+		return nil, fmt.Errorf("unsupported stats range %q", arg.Range)
+	}
+
+	stats, err := s.clickStats.LinkStats(ctx, click.StatsQuery{
+		LinkID:   link.ID,
+		From:     from,
+		Bucket:   bucket,
+		Timezone: arg.Location.String(),
+		TopN:     topDimensionLimit,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to read link stats: %w", err)
+	}
+
+	return &LinkStats{
+		Link:  link,
+		From:  from,
+		To:    time.Now(),
+		Stats: stats,
+	}, nil
+}
+
+// statsWindow turns a range keyword into a start instant aligned to a bucket
+// boundary in loc, plus the bucket size.
+//
+// Alignment matters: "7d" means the last seven calendar days in the user's own
+// timezone (today plus the six before it), not "168 hours ago", which would
+// leave a half-empty bucket at each end of the chart. Ranges therefore always
+// produce a fixed bucket count: 24, 7, 30, 90.
+func statsWindow(rng string, loc *time.Location) (from time.Time, bucket string, ok bool) {
+	now := time.Now().In(loc)
+
+	startOfHour := func() time.Time {
+		return time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, loc)
+	}
+	startOfDay := func() time.Time {
+		return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
+	}
+
+	switch rng {
+	case RangeLast24Hours:
+		return startOfHour().Add(-23 * time.Hour), click.BucketHour, true
+	case RangeLast7Days:
+		return startOfDay().AddDate(0, 0, -6), click.BucketDay, true
+	case RangeLast30Days:
+		return startOfDay().AddDate(0, 0, -29), click.BucketDay, true
+	case RangeLast90Days:
+		return startOfDay().AddDate(0, 0, -89), click.BucketDay, true
+	}
+
+	return time.Time{}, "", false
 }
 
 type UpdateLinkParams struct {

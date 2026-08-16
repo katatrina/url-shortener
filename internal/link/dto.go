@@ -3,6 +3,8 @@ package link
 import (
 	"strings"
 	"time"
+
+	"github.com/katatrina/url-shortener/internal/click"
 )
 
 type CreateLinkRequest struct {
@@ -39,6 +41,53 @@ type LinkListItemResponse struct {
 
 type ListLinksResponse struct {
 	Items []LinkListItemResponse `json:"items"`
+}
+
+const (
+	RangeLast24Hours = "24h"
+	RangeLast7Days   = "7d"
+	RangeLast30Days  = "30d"
+	RangeLast90Days  = "90d"
+)
+
+const defaultStatsRange = RangeLast7Days
+
+const maxTimezoneLen = 64
+
+type StatsSummaryResponse struct {
+	// TotalClicks is all-time and ignores the selected range.
+	TotalClicks   int64      `json:"totalClicks"`
+	ClicksInRange int64      `json:"clicksInRange"`
+	LastClickedAt *time.Time `json:"lastClickedAt"`
+}
+
+type TimeseriesPointResponse struct {
+	// Timestamp is the start of the bucket, in UTC. Buckets with no clicks are
+	// present with clicks: 0 — the series is dense.
+	Timestamp time.Time `json:"timestamp"`
+	Clicks    int64     `json:"clicks"`
+}
+
+// DimensionCountResponse is one row of a breakdown. An empty value means the
+// dimension is unknown: no GeoIP match for a country, no referrer for direct
+// traffic. Labelling that ("Unknown", "Direct") is a presentation decision.
+type DimensionCountResponse struct {
+	Value  string `json:"value"`
+	Clicks int64  `json:"clicks"`
+}
+
+type LinkStatsResponse struct {
+	LinkID      string    `json:"linkId"`
+	Range       string    `json:"range"`
+	Timezone    string    `json:"timezone"`
+	Granularity string    `json:"granularity"`
+	From        time.Time `json:"from"`
+	To          time.Time `json:"to"`
+
+	Summary      StatsSummaryResponse      `json:"summary"`
+	Timeseries   []TimeseriesPointResponse `json:"timeseries"`
+	TopCountries []DimensionCountResponse  `json:"topCountries"`
+	TopReferrers []DimensionCountResponse  `json:"topReferrers"`
 }
 
 type UpdateLinkRequest struct {
@@ -85,6 +134,46 @@ func newListLinksResponse(links []LinkListItem, shortURLBase string) ListLinksRe
 		})
 	}
 	return ListLinksResponse{Items: items}
+}
+
+func newLinkStatsResponse(s *LinkStats, rng string, loc *time.Location) LinkStatsResponse {
+	timeseries := make([]TimeseriesPointResponse, 0, len(s.Stats.Timeseries))
+	for _, p := range s.Stats.Timeseries {
+		timeseries = append(timeseries, TimeseriesPointResponse{
+			Timestamp: p.Bucket.UTC(),
+			Clicks:    p.Clicks,
+		})
+	}
+
+	granularity := click.BucketDay
+	if rng == RangeLast24Hours {
+		granularity = click.BucketHour
+	}
+
+	return LinkStatsResponse{
+		LinkID:      s.Link.ID,
+		Range:       rng,
+		Timezone:    loc.String(),
+		Granularity: granularity,
+		From:        s.From.UTC(),
+		To:          s.To.UTC(),
+		Summary: StatsSummaryResponse{
+			TotalClicks:   s.Stats.Summary.TotalClicks,
+			ClicksInRange: s.Stats.Summary.ClicksInRange,
+			LastClickedAt: utcPtr(s.Stats.Summary.LastClickedAt),
+		},
+		Timeseries:   timeseries,
+		TopCountries: newDimensionCounts(s.Stats.TopCountries),
+		TopReferrers: newDimensionCounts(s.Stats.TopReferrers),
+	}
+}
+
+func newDimensionCounts(in []click.DimensionCount) []DimensionCountResponse {
+	out := make([]DimensionCountResponse, 0, len(in))
+	for _, d := range in {
+		out = append(out, DimensionCountResponse{Value: d.Value, Clicks: d.Clicks})
+	}
+	return out
 }
 
 func utcPtr(t *time.Time) *time.Time {

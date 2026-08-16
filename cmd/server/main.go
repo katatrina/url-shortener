@@ -11,6 +11,8 @@ import (
 	"syscall"
 	"time"
 
+	_ "time/tzdata"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/katatrina/url-shortener/internal/click"
 	"github.com/katatrina/url-shortener/internal/config"
@@ -89,7 +91,8 @@ func run() error {
 
 	tokenIssuer := token.NewIssuer(cfg.JWTSecret, cfg.JWTTTL)
 	userHandler := user.NewHandler(user.NewService(user.NewRepository(db), tokenIssuer))
-	linkHandler := link.NewHandler(link.NewService(link.NewRepository(db), cfg.MaxLinksPerUser), cfg.ShortURLBase, clickPipeline)
+	linkSvc := link.NewService(link.NewRepository(db), click.NewStatsRepository(db), cfg.MaxLinksPerUser)
+	linkHandler := link.NewHandler(linkSvc, cfg.ShortURLBase, clickPipeline)
 
 	r := router.New(cfg, userHandler, linkHandler, tokenIssuer)
 

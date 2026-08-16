@@ -69,6 +69,25 @@ func (r *Repository) FindBySlug(ctx context.Context, slug string) (*Link, error)
 	return &link, nil
 }
 
+func (r *Repository) FindByIDAndUserID(ctx context.Context, id, userID string) (*Link, error) {
+	query := `
+		SELECT id, user_id, slug, destination_url, title, is_custom_slug, created_at, updated_at
+		FROM links
+		WHERE id = $1 AND user_id = $2
+	`
+
+	rows, _ := r.db.Query(ctx, query, id, userID)
+	link, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[Link])
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrLinkNotFound
+		}
+		return nil, err
+	}
+
+	return &link, nil
+}
+
 // ListByUserID returns the user's links with their click totals attached.
 //
 // The LATERAL subquery is evaluated once per link and hits
