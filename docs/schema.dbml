@@ -28,11 +28,12 @@ Table "links" {
 Table "clicks" {
   "id" uuid [pk, not null]
   "link_id" uuid [not null]
-  "clicked_at" timestamptz [not null, default: `now()`]
+  "clicked_at" timestamptz [not null]
   "ip_address" inet
   "referrer" text
-  "country_code" text
   "referrer_host" text
+  "country_code" text
+  "user_agent" text
 }
 
 Ref "clicks_link_id_fkey":"links"."id" < "clicks"."link_id" [delete: cascade]
