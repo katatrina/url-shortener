@@ -91,7 +91,7 @@ func run() error {
 
 	tokenIssuer := token.NewIssuer(cfg.JWTSecret, cfg.JWTTTL)
 	userHandler := user.NewHandler(user.NewService(user.NewRepository(db), tokenIssuer))
-	linkSvc := link.NewService(link.NewRepository(db), click.NewStatsRepository(db), cfg.MaxLinksPerUser)
+	linkSvc := link.NewService(link.NewRepository(db), cfg.MaxLinksPerUser)
 	linkHandler := link.NewHandler(linkSvc, cfg.ShortURLBase, clickPipeline)
 
 	r := router.New(cfg, userHandler, linkHandler, tokenIssuer)

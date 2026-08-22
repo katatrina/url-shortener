@@ -3,8 +3,6 @@ package link
 import (
 	"strings"
 	"time"
-
-	"github.com/katatrina/url-shortener/internal/click"
 )
 
 type CreateLinkRequest struct {
@@ -35,8 +33,7 @@ type LinkResponse struct {
 
 type LinkListItemResponse struct {
 	LinkResponse
-	Clicks        int64      `json:"clicks"`
-	LastClickedAt *time.Time `json:"lastClickedAt"`
+	Clicks int64 `json:"clicks"`
 }
 
 type ListLinksResponse struct {
@@ -56,9 +53,8 @@ const maxTimezoneLen = 64
 
 type StatsSummaryResponse struct {
 	// TotalClicks is all-time and ignores the selected range.
-	TotalClicks   int64      `json:"totalClicks"`
-	ClicksInRange int64      `json:"clicksInRange"`
-	LastClickedAt *time.Time `json:"lastClickedAt"`
+	TotalClicks   int64 `json:"totalClicks"`
+	ClicksInRange int64 `json:"clicksInRange"`
 }
 
 type TimeseriesPointResponse struct {
@@ -128,9 +124,8 @@ func newListLinksResponse(links []LinkListItem, shortURLBase string) ListLinksRe
 		l := &links[i]
 
 		items = append(items, LinkListItemResponse{
-			LinkResponse:  newLinkResponse(&l.Link, shortURLBase),
-			Clicks:        l.ClickCount,
-			LastClickedAt: utcPtr(l.LastClickedAt),
+			LinkResponse: newLinkResponse(&l.Link, shortURLBase),
+			Clicks:       l.ClickCount,
 		})
 	}
 	return ListLinksResponse{Items: items}
@@ -145,9 +140,9 @@ func newLinkStatsResponse(s *LinkStats, rng string, loc *time.Location) LinkStat
 		})
 	}
 
-	granularity := click.BucketDay
+	granularity := BucketDay
 	if rng == RangeLast24Hours {
-		granularity = click.BucketHour
+		granularity = BucketHour
 	}
 
 	return LinkStatsResponse{
@@ -160,7 +155,6 @@ func newLinkStatsResponse(s *LinkStats, rng string, loc *time.Location) LinkStat
 		Summary: StatsSummaryResponse{
 			TotalClicks:   s.Stats.Summary.TotalClicks,
 			ClicksInRange: s.Stats.Summary.ClicksInRange,
-			LastClickedAt: utcPtr(s.Stats.Summary.LastClickedAt),
 		},
 		Timeseries:   timeseries,
 		TopCountries: newDimensionCounts(s.Stats.TopCountries),
@@ -168,17 +162,10 @@ func newLinkStatsResponse(s *LinkStats, rng string, loc *time.Location) LinkStat
 	}
 }
 
-func newDimensionCounts(in []click.DimensionCount) []DimensionCountResponse {
+func newDimensionCounts(in []DimensionCount) []DimensionCountResponse {
 	out := make([]DimensionCountResponse, 0, len(in))
 	for _, d := range in {
 		out = append(out, DimensionCountResponse{Value: d.Value, Clicks: d.Clicks})
 	}
 	return out
-}
-
-func utcPtr(t *time.Time) *time.Time {
-	if t == nil {
-		return nil
-	}
-	return new(t.UTC())
 }

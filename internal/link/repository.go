@@ -88,34 +88,17 @@ func (r *Repository) FindByIDAndUserID(ctx context.Context, id, userID string) (
 	return &link, nil
 }
 
-// ListByUserID returns the user's links with their click totals attached.
-//
-// The LATERAL subquery is evaluated once per link and hits
-// idx_clicks_link_id_clicked_at, so cost scales with the number of links the
-// user owns (capped by MaxLinksPerUser), not with the size of the clicks table.
-// A plain LEFT JOIN on a grouped subquery would aggregate every click in the
-// system before filtering — same result, wrong shape.
-func (r *Repository) ListByUserID(ctx context.Context, userID string) ([]LinkListItem, error) {
+func (r *Repository) List(ctx context.Context, userID string) ([]LinkListItem, error) {
 	query := `
-		SELECT l.id, l.user_id, l.slug, l.destination_url, l.title, l.is_custom_slug,
-		       l.created_at, l.updated_at,
-		       COALESCE(c.click_count, 0) AS click_count,
-		       c.last_clicked_at
-		FROM links l
-		         LEFT JOIN LATERAL (
-		    SELECT count(*) AS click_count, max(clicked_at) AS last_clicked_at
-		    FROM clicks
-		    WHERE link_id = l.id
-		    ) c ON true
-		WHERE l.user_id = $1
-		ORDER BY l.created_at DESC
+		SELECT l.*, (SELECT count(*) FROM clicks WHERE clicks.link_id = l.id) AS click_count
+		FROM links l WHERE l.user_id = $1 ORDER BY l.created_at DESC;
 	`
 
 	rows, _ := r.db.Query(ctx, query, userID)
 	return pgx.CollectRows(rows, pgx.RowToStructByName[LinkListItem])
 }
 
-func (r *Repository) CountByUserID(ctx context.Context, userID string) (int64, error) {
+func (r *Repository) Count(ctx context.Context, userID string) (int64, error) {
 	query := `SELECT count(*) FROM links WHERE user_id = $1`
 
 	var count int64
@@ -148,7 +131,7 @@ func (r *Repository) Update(ctx context.Context, arg UpdateLinkParams) (*Link, e
 	return &link, nil
 }
 
-func (r *Repository) DeleteByIDAndUserID(ctx context.Context, id, userID string) error {
+func (r *Repository) Delete(ctx context.Context, id, userID string) error {
 	query := `DELETE FROM links WHERE id = $1 AND user_id = $2`
 
 	tag, err := r.db.Exec(ctx, query, id, userID)
