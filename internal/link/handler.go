@@ -60,10 +60,9 @@ func (h *Handler) CreateLink(c *gin.Context) error {
 }
 
 func (h *Handler) GetLinkStats(c *gin.Context) error {
-	id := c.Param("id")
-
-	if err := uuid.Validate(id); err != nil {
-		return ErrLinkNotFound
+	id, err := parseLinkID(c.Param("id"))
+	if err != nil {
+		return err
 	}
 
 	rng, err := parseStatsRange(c.Query("range"))
@@ -133,6 +132,15 @@ func parseTimezone(raw string) (*time.Location, error) {
 	return loc, nil
 }
 
+func parseLinkID(raw string) (string, error) {
+	id, err := uuid.Parse(raw)
+	if err != nil {
+		return "", ErrLinkNotFound
+	}
+
+	return id.String(), nil
+}
+
 func (h *Handler) ListLinks(c *gin.Context) error {
 	links, err := h.linkSvc.ListLinks(c.Request.Context(), middleware.UserID(c))
 	if err != nil {
@@ -143,10 +151,9 @@ func (h *Handler) ListLinks(c *gin.Context) error {
 }
 
 func (h *Handler) UpdateLink(c *gin.Context) error {
-	id := c.Param("id")
-
-	if err := uuid.Validate(id); err != nil {
-		return ErrLinkNotFound
+	id, err := parseLinkID(c.Param("id"))
+	if err != nil {
+		return err
 	}
 
 	var req UpdateLinkRequest
@@ -156,7 +163,7 @@ func (h *Handler) UpdateLink(c *gin.Context) error {
 
 	if req.IsEmpty() {
 		return apperror.New(http.StatusUnprocessableEntity, apperror.CodeValidationFailed,
-			"At least one field must be provided with a non-null value")
+			"At least one field must be provided with non-null value")
 	}
 
 	link, err := h.linkSvc.UpdateLink(c.Request.Context(), UpdateLinkParams{
@@ -173,10 +180,9 @@ func (h *Handler) UpdateLink(c *gin.Context) error {
 }
 
 func (h *Handler) DeleteLink(c *gin.Context) error {
-	id := c.Param("id")
-
-	if err := uuid.Validate(id); err != nil {
-		return ErrLinkNotFound
+	id, err := parseLinkID(c.Param("id"))
+	if err != nil {
+		return err
 	}
 
 	if err := h.linkSvc.DeleteLink(c.Request.Context(), id, middleware.UserID(c)); err != nil {
