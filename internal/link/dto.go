@@ -49,24 +49,24 @@ const (
 
 const defaultStatsRange = RangeLast7Days
 
-const maxTimezoneLen = 64
-
-type StatsSummaryResponse struct {
-	// TotalClicks is all-time and ignores the selected range.
+type ClickSummaryResponse struct {
 	TotalClicks   int64 `json:"totalClicks"`
 	ClicksInRange int64 `json:"clicksInRange"`
 }
 
-type TimeseriesPointResponse struct {
-	// Timestamp is the start of the bucket, in UTC. Buckets with no clicks are
-	// present with clicks: 0 — the series is dense.
+type TimePointResponse struct {
 	Timestamp time.Time `json:"timestamp"`
 	Clicks    int64     `json:"clicks"`
 }
 
-// DimensionCountResponse is one row of a breakdown. An empty value means the
-// dimension is unknown: no GeoIP match for a country, no referrer for direct
-// traffic. Labelling that ("Unknown", "Direct") is a presentation decision.
+// Sentinels for a row whose dimension is unknown. Parentheses are illegal in
+// both a hostname and an ISO 3166-1 country code, so neither can be mistaken
+// for a real value. Translating them for display is up to the client.
+const (
+	unknownCountry = "(unknown)"
+	directReferrer = "(direct)"
+)
+
 type DimensionCountResponse struct {
 	Value  string `json:"value"`
 	Clicks int64  `json:"clicks"`
@@ -80,10 +80,10 @@ type LinkStatsResponse struct {
 	From        time.Time `json:"from"`
 	To          time.Time `json:"to"`
 
-	Summary      StatsSummaryResponse      `json:"summary"`
-	Timeseries   []TimeseriesPointResponse `json:"timeseries"`
-	TopCountries []DimensionCountResponse  `json:"topCountries"`
-	TopReferrers []DimensionCountResponse  `json:"topReferrers"`
+	Summary      ClickSummaryResponse     `json:"summary"`
+	Timeseries   []TimePointResponse      `json:"timeseries"`
+	TopCountries []DimensionCountResponse `json:"topCountries"`
+	TopReferrers []DimensionCountResponse `json:"topReferrers"`
 }
 
 type UpdateLinkRequest struct {
@@ -131,41 +131,40 @@ func newListLinksResponse(links []LinkListItem, shortURLBase string) ListLinksRe
 	return ListLinksResponse{Items: items}
 }
 
-func newLinkStatsResponse(s *LinkStats, rng string, loc *time.Location) LinkStatsResponse {
-	timeseries := make([]TimeseriesPointResponse, 0, len(s.Stats.Timeseries))
+func newLinkStatsResponse(s *LinkStats, linkID, rng string, loc *time.Location) LinkStatsResponse {
+	timeseries := make([]TimePointResponse, 0, len(s.Stats.Timeseries))
 	for _, p := range s.Stats.Timeseries {
-		timeseries = append(timeseries, TimeseriesPointResponse{
-			Timestamp: p.Bucket.UTC(),
+		timeseries = append(timeseries, TimePointResponse{
+			Timestamp: p.Bucket.In(loc),
 			Clicks:    p.Clicks,
 		})
 	}
 
-	granularity := BucketDay
-	if rng == RangeLast24Hours {
-		granularity = BucketHour
-	}
-
 	return LinkStatsResponse{
-		LinkID:      s.Link.ID,
+		LinkID:      linkID,
 		Range:       rng,
 		Timezone:    loc.String(),
-		Granularity: granularity,
-		From:        s.From.UTC(),
-		To:          s.To.UTC(),
-		Summary: StatsSummaryResponse{
+		Granularity: s.Granularity,
+		From:        s.From.In(loc),
+		To:          s.To.In(loc),
+		Summary: ClickSummaryResponse{
 			TotalClicks:   s.Stats.Summary.TotalClicks,
 			ClicksInRange: s.Stats.Summary.ClicksInRange,
 		},
 		Timeseries:   timeseries,
-		TopCountries: newDimensionCounts(s.Stats.TopCountries),
-		TopReferrers: newDimensionCounts(s.Stats.TopReferrers),
+		TopCountries: newDimensionCounts(s.Stats.TopCountries, unknownCountry),
+		TopReferrers: newDimensionCounts(s.Stats.TopReferrers, directReferrer),
 	}
 }
 
-func newDimensionCounts(in []DimensionCount) []DimensionCountResponse {
+func newDimensionCounts(in []DimensionCount, label string) []DimensionCountResponse {
 	out := make([]DimensionCountResponse, 0, len(in))
 	for _, d := range in {
-		out = append(out, DimensionCountResponse{Value: d.Value, Clicks: d.Clicks})
+		value := label
+		if d.Value != nil {
+			value = *d.Value
+		}
+		out = append(out, DimensionCountResponse{Value: value, Clicks: d.Clicks})
 	}
 	return out
 }

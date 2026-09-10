@@ -85,18 +85,18 @@ func (h *Handler) GetLinkStats(c *gin.Context) error {
 		return err
 	}
 
-	return response.Success(c, http.StatusOK, newLinkStatsResponse(stats, rng, loc))
+	return response.Success(c, http.StatusOK, newLinkStatsResponse(stats, id, rng, loc))
 }
 
-func parseStatsRange(raw string) (string, error) {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
+func parseStatsRange(val string) (string, error) {
+	val = strings.TrimSpace(val)
+	if val == "" {
 		return defaultStatsRange, nil
 	}
 
-	switch raw {
+	switch val {
 	case RangeLast24Hours, RangeLast7Days, RangeLast30Days, RangeLast90Days:
-		return raw, nil
+		return val, nil
 	}
 
 	return "", apperror.New(http.StatusUnprocessableEntity, apperror.CodeValidationFailed,
@@ -107,9 +107,9 @@ func parseStatsRange(raw string) (string, error) {
 		})
 }
 
-func parseTimezone(raw string) (*time.Location, error) {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
+func parseTimezone(val string) (*time.Location, error) {
+	val = strings.TrimSpace(val)
+	if val == "" {
 		return time.UTC, nil
 	}
 
@@ -120,11 +120,11 @@ func parseTimezone(raw string) (*time.Location, error) {
 			Message: "tz must be a valid IANA timezone name, e.g. Asia/Ho_Chi_Minh",
 		})
 
-	if len(raw) > maxTimezoneLen {
+	if val != "UTC" && !strings.Contains(val, "/") {
 		return nil, invalid
 	}
 
-	loc, err := time.LoadLocation(raw)
+	loc, err := time.LoadLocation(val)
 	if err != nil {
 		return nil, invalid
 	}
@@ -132,8 +132,8 @@ func parseTimezone(raw string) (*time.Location, error) {
 	return loc, nil
 }
 
-func parseLinkID(raw string) (string, error) {
-	id, err := uuid.Parse(raw)
+func parseLinkID(val string) (string, error) {
+	id, err := uuid.Parse(val)
 	if err != nil {
 		return "", ErrLinkNotFound
 	}
@@ -193,9 +193,9 @@ func (h *Handler) DeleteLink(c *gin.Context) error {
 }
 
 func (h *Handler) Redirect(c *gin.Context) {
-	rawSlug := c.Param("slug")
+	slug := c.Param("slug")
 
-	link, err := h.linkSvc.ResolveSlug(c.Request.Context(), rawSlug)
+	link, err := h.linkSvc.ResolveSlug(c.Request.Context(), slug)
 	if err != nil {
 		if errors.Is(err, ErrLinkNotFound) {
 			c.String(http.StatusNotFound, "Link not found")
@@ -203,7 +203,7 @@ func (h *Handler) Redirect(c *gin.Context) {
 		}
 
 		slog.ErrorContext(c.Request.Context(), "redirect lookup failed",
-			slog.String("slug", rawSlug),
+			slog.String("slug", slug),
 			slog.Any("error", err),
 		)
 		c.String(http.StatusInternalServerError, "Something went wrong")

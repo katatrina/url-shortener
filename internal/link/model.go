@@ -21,12 +21,12 @@ type LinkListItem struct {
 type ClickStatsQuery struct {
 	LinkID   string
 	From     time.Time
+	To       time.Time
 	Bucket   string
 	Timezone string
 	TopN     int
 }
 
-// Bucket fields accepted by ClickStatsQuery. They map 1:1 to date_trunc fields.
 const (
 	BucketHour = "hour"
 	BucketDay  = "day"
@@ -42,12 +42,11 @@ type TimePoint struct {
 	Clicks int64     `db:"clicks"`
 }
 
-// DimensionCount is one row of a top-N breakdown. Value is empty when the
-// dimension is unknown: no GeoIP hit for a country, no referrer header for a
-// referrer host (i.e. direct traffic). Naming that is the client's job.
 type DimensionCount struct {
-	Value  string `db:"value"`
-	Clicks int64  `db:"clicks"`
+	// Value is nil when the dimension is unknown: no GeoIP hit for a country,
+	// no Referer header for a referrer.
+	Value  *string `db:"value"`
+	Clicks int64   `db:"clicks"`
 }
 
 type ClickStats struct {

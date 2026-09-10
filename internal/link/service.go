@@ -13,10 +13,7 @@ import (
 
 const maxSlugRetries = 3
 
-// topDimensionLimit caps each top-N breakdown. Ten rows is what a dashboard
-// panel can show without a scrollbar; a long tail of one-click referrers is
-// noise, not insight.
-const topDimensionLimit = 10
+const topDimensionLimit = 5
 
 type Service struct {
 	linkRepo        *Repository
@@ -95,8 +92,8 @@ func (s *Service) createWithCustomSlug(ctx context.Context, arg CreateLinkParams
 	})
 }
 
-func (s *Service) ResolveSlug(ctx context.Context, rawSlug string) (*Link, error) {
-	return s.linkRepo.FindBySlug(ctx, rawSlug)
+func (s *Service) ResolveSlug(ctx context.Context, slug string) (*Link, error) {
+	return s.linkRepo.FindBySlug(ctx, slug)
 }
 
 func (s *Service) ListLinks(ctx context.Context, userID string) ([]LinkListItem, error) {
@@ -110,28 +107,29 @@ type GetLinkStatsParams struct {
 	Location *time.Location
 }
 
-// LinkStats is everything the analytics screen renders in one shot.
 type LinkStats struct {
-	Link  *Link
-	From  time.Time
-	To    time.Time
-	Stats *ClickStats
+	From        time.Time
+	To          time.Time
+	Granularity string
+	Stats       *ClickStats
 }
 
 func (s *Service) GetLinkStats(ctx context.Context, arg GetLinkStatsParams) (*LinkStats, error) {
-	link, err := s.linkRepo.FindByIDAndUserID(ctx, arg.LinkID, arg.UserID)
-	if err != nil {
+	if _, err := s.linkRepo.FindByIDAndUserID(ctx, arg.LinkID, arg.UserID); err != nil {
 		return nil, err
 	}
 
-	from, bucket, ok := statsWindow(arg.Range, arg.Location)
+	to := time.Now()
+
+	from, bucket, ok := statsWindow(arg.Range, to, arg.Location)
 	if !ok {
 		return nil, fmt.Errorf("unsupported stats range %q", arg.Range)
 	}
 
 	stats, err := s.linkRepo.ClickStats(ctx, ClickStatsQuery{
-		LinkID:   link.ID,
+		LinkID:   arg.LinkID,
 		From:     from,
+		To:       to,
 		Bucket:   bucket,
 		Timezone: arg.Location.String(),
 		TopN:     topDimensionLimit,
@@ -141,15 +139,15 @@ func (s *Service) GetLinkStats(ctx context.Context, arg GetLinkStatsParams) (*Li
 	}
 
 	return &LinkStats{
-		Link:  link,
-		From:  from,
-		To:    time.Now(),
-		Stats: stats,
+		From:        from,
+		To:          to,
+		Granularity: bucket,
+		Stats:       stats,
 	}, nil
 }
 
-func statsWindow(rng string, loc *time.Location) (from time.Time, bucket string, ok bool) {
-	now := time.Now().In(loc)
+func statsWindow(rng string, now time.Time, loc *time.Location) (from time.Time, bucket string, ok bool) {
+	now = now.In(loc)
 
 	startOfHour := func() time.Time {
 		return time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, loc)
