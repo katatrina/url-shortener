@@ -15,17 +15,3 @@ linters:
   enable:
     # Bật thêm gosec để quét các vấn đề bảo mật trong code
     - gosec
-
-  settings:
-    errcheck:
-      # Bỏ qua việc kiểm tra lỗi trả về của các hàm sau
-      exclude-functions:
-        - (io.Closer).Close
-
-  exclusions:
-    rules:
-      # Nới lỏng quy tắc cho file test
-      - path: _test\.go
-        linters:
-          - errcheck
-          - gosec
