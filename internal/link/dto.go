@@ -59,13 +59,7 @@ type TimePointResponse struct {
 	Clicks    int64     `json:"clicks"`
 }
 
-// Sentinels for a row whose dimension is unknown. Parentheses are illegal in
-// both a hostname and an ISO 3166-1 country code, so neither can be mistaken
-// for a real value. Translating them for display is up to the client.
-const (
-	unknownCountry = "(unknown)"
-	directReferrer = "(direct)"
-)
+const unknownDimension = "(unknown)"
 
 type DimensionCountResponse struct {
 	Value  string `json:"value"`
@@ -152,15 +146,15 @@ func newLinkStatsResponse(s *LinkStats, linkID, rng string, loc *time.Location) 
 			ClicksInRange: s.Stats.Summary.ClicksInRange,
 		},
 		Timeseries:   timeseries,
-		TopCountries: newDimensionCounts(s.Stats.TopCountries, unknownCountry),
-		TopReferrers: newDimensionCounts(s.Stats.TopReferrers, directReferrer),
+		TopCountries: newDimensionCounts(s.Stats.TopCountries),
+		TopReferrers: newDimensionCounts(s.Stats.TopReferrers),
 	}
 }
 
-func newDimensionCounts(in []DimensionCount, label string) []DimensionCountResponse {
+func newDimensionCounts(in []DimensionCount) []DimensionCountResponse {
 	out := make([]DimensionCountResponse, 0, len(in))
 	for _, d := range in {
-		value := label
+		value := unknownDimension
 		if d.Value != nil {
 			value = *d.Value
 		}
