@@ -7,10 +7,10 @@ import (
 )
 
 const clickStatsSummary = `
-	SELECT count(*)                                                     AS total_clicks,
-	       count(*) FILTER (WHERE clicked_at >= $2 AND clicked_at < $3) AS clicks_in_range
+	SELECT count(*) FILTER (WHERE clicked_at >= $2 AND clicked_at < $3) AS clicks,
+	       count(*) FILTER (WHERE clicked_at >= $4 AND clicked_at < $5) AS previous_clicks
 	FROM clicks
-	WHERE link_id = $1
+	WHERE link_id = $1 AND clicked_at >= $4 AND clicked_at < $3
 `
 
 const clickStatsTimeseries = `
@@ -60,9 +60,9 @@ func (r *Repository) ClickStats(ctx context.Context, q ClickStatsQuery) (*ClickS
 		_ = tx.Rollback(ctx)
 	}()
 
-	err = tx.QueryRow(ctx, clickStatsSummary, q.LinkID, q.From, q.To).Scan(
-		&stats.Summary.TotalClicks,
-		&stats.Summary.ClicksInRange,
+	err = tx.QueryRow(ctx, clickStatsSummary, q.LinkID, q.From, q.To, q.PreviousFrom, q.PreviousTo).Scan(
+		&stats.Summary.Clicks,
+		&stats.Summary.PreviousClicks,
 	)
 	if err != nil {
 		return nil, err
@@ -86,5 +86,9 @@ func (r *Repository) ClickStats(ctx context.Context, q ClickStatsQuery) (*ClickS
 		return nil, err
 	}
 
-	return &stats, tx.Commit(ctx)
+	if err = tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+
+	return &stats, nil
 }

@@ -50,8 +50,8 @@ const (
 const defaultStatsRange = RangeLast7Days
 
 type ClickSummaryResponse struct {
-	TotalClicks   int64 `json:"totalClicks"`
-	ClicksInRange int64 `json:"clicksInRange"`
+	Clicks         int64  `json:"clicks"`
+	PreviousClicks *int64 `json:"previousClicks"`
 }
 
 type TimePointResponse struct {
@@ -67,12 +67,14 @@ type DimensionCountResponse struct {
 }
 
 type LinkStatsResponse struct {
-	LinkID      string    `json:"linkId"`
-	Range       string    `json:"range"`
-	Timezone    string    `json:"timezone"`
-	Granularity string    `json:"granularity"`
-	From        time.Time `json:"from"`
-	To          time.Time `json:"to"`
+	ID           string    `json:"id"`
+	Range        string    `json:"range"`
+	Timezone     string    `json:"timezone"`
+	Granularity  string    `json:"granularity"`
+	From         time.Time `json:"from"`
+	To           time.Time `json:"to"`
+	PreviousFrom time.Time `json:"previousFrom"`
+	PreviousTo   time.Time `json:"previousTo"`
 
 	Summary      ClickSummaryResponse     `json:"summary"`
 	Timeseries   []TimePointResponse      `json:"timeseries"`
@@ -125,9 +127,9 @@ func newListLinksResponse(links []LinkListItem, shortURLBase string) ListLinksRe
 	return ListLinksResponse{Items: items}
 }
 
-func newLinkStatsResponse(s *LinkStats, linkID, rng string, loc *time.Location) LinkStatsResponse {
-	timeseries := make([]TimePointResponse, 0, len(s.Stats.Timeseries))
-	for _, p := range s.Stats.Timeseries {
+func newLinkStatsResponse(s *LinkStats, rng string, loc *time.Location) LinkStatsResponse {
+	timeseries := make([]TimePointResponse, 0, len(s.Timeseries))
+	for _, p := range s.Timeseries {
 		timeseries = append(timeseries, TimePointResponse{
 			Timestamp: p.Bucket.In(loc),
 			Clicks:    p.Clicks,
@@ -135,19 +137,21 @@ func newLinkStatsResponse(s *LinkStats, linkID, rng string, loc *time.Location) 
 	}
 
 	return LinkStatsResponse{
-		LinkID:      linkID,
-		Range:       rng,
-		Timezone:    loc.String(),
-		Granularity: s.Granularity,
-		From:        s.From.In(loc),
-		To:          s.To.In(loc),
+		ID:           s.LinkID,
+		Range:        rng,
+		Timezone:     loc.String(),
+		Granularity:  s.Granularity,
+		From:         s.From.In(loc),
+		To:           s.To.In(loc),
+		PreviousFrom: s.PreviousFrom.In(loc),
+		PreviousTo:   s.PreviousTo.In(loc),
 		Summary: ClickSummaryResponse{
-			TotalClicks:   s.Stats.Summary.TotalClicks,
-			ClicksInRange: s.Stats.Summary.ClicksInRange,
+			Clicks:         s.Clicks,
+			PreviousClicks: s.PreviousClicks,
 		},
 		Timeseries:   timeseries,
-		TopCountries: newDimensionCounts(s.Stats.TopCountries),
-		TopReferrers: newDimensionCounts(s.Stats.TopReferrers),
+		TopCountries: newDimensionCounts(s.TopCountries),
+		TopReferrers: newDimensionCounts(s.TopReferrers),
 	}
 }
 

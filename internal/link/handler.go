@@ -85,7 +85,7 @@ func (h *Handler) GetLinkStats(c *gin.Context) error {
 		return err
 	}
 
-	return response.Success(c, http.StatusOK, newLinkStatsResponse(stats, id, rng, loc))
+	return response.Success(c, http.StatusOK, newLinkStatsResponse(stats, rng, loc))
 }
 
 func parseStatsRange(val string) (string, error) {

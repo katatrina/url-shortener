@@ -19,12 +19,14 @@ type LinkListItem struct {
 }
 
 type ClickStatsQuery struct {
-	LinkID   string
-	From     time.Time
-	To       time.Time
-	Bucket   string
-	Timezone string
-	TopN     int
+	LinkID       string
+	From         time.Time
+	To           time.Time
+	PreviousFrom time.Time
+	PreviousTo   time.Time
+	Bucket       string
+	Timezone     string
+	TopN         int
 }
 
 const (
@@ -33,8 +35,8 @@ const (
 )
 
 type ClickSummary struct {
-	TotalClicks   int64 `db:"total_clicks"`
-	ClicksInRange int64 `db:"clicks_in_range"`
+	Clicks         int64 `db:"clicks"`
+	PreviousClicks int64 `db:"previous_clicks"`
 }
 
 type TimePoint struct {
@@ -43,8 +45,6 @@ type TimePoint struct {
 }
 
 type DimensionCount struct {
-	// Value is nil when the dimension is unknown: no GeoIP hit for a country,
-	// no Referer header for a referrer.
 	Value  *string `db:"value"`
 	Clicks int64   `db:"clicks"`
 }

@@ -108,66 +108,107 @@ type GetLinkStatsParams struct {
 }
 
 type LinkStats struct {
-	From        time.Time
-	To          time.Time
-	Granularity string
-	Stats       *ClickStats
+	LinkID       string
+	From         time.Time
+	To           time.Time
+	PreviousFrom time.Time
+	PreviousTo   time.Time
+	Granularity  string
+
+	Clicks         int64
+	PreviousClicks *int64
+
+	Timeseries   []TimePoint
+	TopCountries []DimensionCount
+	TopReferrers []DimensionCount
 }
 
 func (s *Service) GetLinkStats(ctx context.Context, arg GetLinkStatsParams) (*LinkStats, error) {
-	if _, err := s.linkRepo.FindByIDAndUserID(ctx, arg.LinkID, arg.UserID); err != nil {
+	link, err := s.linkRepo.FindByIDAndUserID(ctx, arg.LinkID, arg.UserID)
+	if err != nil {
 		return nil, err
 	}
 
-	to := time.Now()
-
-	from, bucket, ok := statsWindow(arg.Range, to, arg.Location)
+	w, ok := newStatsWindow(arg.Range, arg.Location)
 	if !ok {
 		return nil, fmt.Errorf("unsupported stats range %q", arg.Range)
 	}
 
 	stats, err := s.linkRepo.ClickStats(ctx, ClickStatsQuery{
-		LinkID:   arg.LinkID,
-		From:     from,
-		To:       to,
-		Bucket:   bucket,
-		Timezone: arg.Location.String(),
-		TopN:     topDimensionLimit,
+		LinkID:       arg.LinkID,
+		From:         w.From,
+		To:           w.To,
+		PreviousFrom: w.PreviousFrom,
+		PreviousTo:   w.PreviousTo,
+		Bucket:       w.Bucket,
+		Timezone:     arg.Location.String(),
+		TopN:         topDimensionLimit,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to read link stats: %w", err)
 	}
 
-	return &LinkStats{
-		From:        from,
-		To:          to,
-		Granularity: bucket,
-		Stats:       stats,
-	}, nil
+	out := &LinkStats{
+		LinkID:       link.ID,
+		From:         w.From,
+		To:           w.To,
+		PreviousFrom: w.PreviousFrom,
+		PreviousTo:   w.PreviousTo,
+		Granularity:  w.Bucket,
+		Clicks:       stats.Summary.Clicks,
+		Timeseries:   stats.Timeseries,
+		TopCountries: stats.TopCountries,
+		TopReferrers: stats.TopReferrers,
+	}
+	if !link.CreatedAt.After(w.PreviousFrom) {
+		out.PreviousClicks = &stats.Summary.PreviousClicks
+	}
+
+	return out, nil
 }
 
-func statsWindow(rng string, now time.Time, loc *time.Location) (from time.Time, bucket string, ok bool) {
-	now = now.In(loc)
+type statsWindow struct {
+	From, To                 time.Time
+	PreviousFrom, PreviousTo time.Time
+	Bucket                   string
+}
 
-	startOfHour := func() time.Time {
-		return time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, loc)
-	}
-	startOfDay := func() time.Time {
-		return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
-	}
+func newStatsWindow(rng string, loc *time.Location) (statsWindow, bool) {
+	now := time.Now().In(loc)
 
 	switch rng {
 	case RangeLast24Hours:
-		return startOfHour().Add(-23 * time.Hour), BucketHour, true
+		startOfHour := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, loc)
+		from := startOfHour.Add(-23 * time.Hour)
+		return statsWindow{
+			From:         from,
+			To:           now,
+			PreviousFrom: from.Add(-24 * time.Hour),
+			PreviousTo:   now.Add(-24 * time.Hour),
+			Bucket:       BucketHour,
+		}, true
 	case RangeLast7Days:
-		return startOfDay().AddDate(0, 0, -6), BucketDay, true
+		return newDayStatsWindow(now, 7, loc), true
 	case RangeLast30Days:
-		return startOfDay().AddDate(0, 0, -29), BucketDay, true
+		return newDayStatsWindow(now, 30, loc), true
 	case RangeLast90Days:
-		return startOfDay().AddDate(0, 0, -89), BucketDay, true
+		return newDayStatsWindow(now, 90, loc), true
 	}
 
-	return time.Time{}, "", false
+	return statsWindow{}, false
+}
+
+func newDayStatsWindow(now time.Time, days int, loc *time.Location) statsWindow {
+	startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
+	from := startOfDay.AddDate(0, 0, -(days - 1))
+
+	return statsWindow{
+		From:         from,
+		To:           now,
+		PreviousFrom: from.AddDate(0, 0, -days),
+		PreviousTo:   now.AddDate(0, 0, -days),
+		Bucket:       BucketDay,
+	}
 }
 
 type UpdateLinkParams struct {
