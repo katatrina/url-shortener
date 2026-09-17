@@ -34,6 +34,10 @@ Table "clicks" {
   "referrer_host" text
   "country_code" text
   "user_agent" text
+
+  Indexes {
+    (link_id, clicked_at) [type: btree, name: "clicks_link_id_clicked_at_idx"]
+  }
 }
 
 Ref "clicks_link_id_fkey":"links"."id" < "clicks"."link_id" [delete: cascade]
