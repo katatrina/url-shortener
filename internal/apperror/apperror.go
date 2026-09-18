@@ -1,12 +1,3 @@
-// Package apperror defines the shared "error vocabulary" of the transport
-// layer: error codes, field errors, and AppError (an error that already
-// knows how to be returned to the client).
-//
-// Dependency conventions:
-//   - apperror does NOT import gin or any other package in this project.
-//   - request/handler produces *AppError (binding/validation errors).
-//   - router/writeError maps service-layer sentinel errors -> responses.
-//   - The service layer does NOT use this package — services return sentinel errors only.
 package apperror
 
 type ErrorCode string
@@ -31,8 +22,8 @@ const (
 	FieldCodeInvalidFormat FieldErrorCode = "INVALID_FORMAT"
 	FieldCodeTooShort      FieldErrorCode = "TOO_SHORT"
 	FieldCodeTooLong       FieldErrorCode = "TOO_LONG"
+	FieldCodeInvalid       FieldErrorCode = "INVALID"
 	// FieldCodeWeakPassword FieldErrorCode = "WEAK_PASSWORD" // disabled: relaxed password policy
-	FieldCodeInvalid FieldErrorCode = "INVALID"
 )
 
 type FieldError struct {
@@ -41,8 +32,6 @@ type FieldError struct {
 	Message string         `json:"message"`
 }
 
-// AppError is a transport-layer error: it carries the HTTP status,
-// error code, and a message that is safe to return to the client as-is.
 type AppError struct {
 	HTTPStatus int
 	Code       ErrorCode

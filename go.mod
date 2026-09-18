@@ -11,6 +11,7 @@ require (
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/joho/godotenv v1.5.1
 	github.com/lmittmann/tint v1.1.3
+	github.com/oschwald/maxminddb-golang/v2 v2.4.1
 	golang.org/x/crypto v0.53.0
 )
 

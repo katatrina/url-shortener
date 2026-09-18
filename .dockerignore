@@ -14,5 +14,8 @@ Dockerfile
 .dockerignore
 docker-compose.yml
 
+# GeoIP database — downloaded in the build, not shipped as context
+geoip/
+
 # Docs & misc
 *.md

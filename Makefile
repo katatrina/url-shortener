@@ -1,14 +1,17 @@
 DATABASE_URL ?= postgres://root:secret@localhost:5432/url_shortener?sslmode=disable
 MIGRATIONS_DIR = ./migrations
 
-# --- Dev hằng ngày: chạy thẳng trên máy ---
-server:
+.PHONY: geoip
+
+build:
+	go build ./...
+
+run:
 	go run ./cmd/server
 
 lint:
 	golangci-lint run
 
-# --- Migration ---
 migrate-create:
 	goose -dir $(MIGRATIONS_DIR) -s create $(name) sql
 
@@ -24,11 +27,17 @@ migrate-down-1:
 migrate-status:
 	goose -dir $(MIGRATIONS_DIR) postgres "$(DATABASE_URL)" status -v
 
-# --- Hạ tầng local ---
-network:
-	docker network inspect url-shortener-network >/dev/null 2>&1 || docker network create url-shortener-network
+db2dbml:
+	db2dbml postgres "$(DATABASE_URL)" -o docs/schema.dbml
 
-compose: network
+GEOIP_DB = geoip/dbip-country-lite.mmdb
+GEOIP_MONTH ?= 2026-08
+
+geoip:
+	mkdir -p geoip
+	curl -fsSL "https://download.db-ip.com/free/dbip-country-lite-$(GEOIP_MONTH).mmdb.gz" | gunzip > $(GEOIP_DB)
+
+compose:
 	docker compose up -d
 
 compose-down:

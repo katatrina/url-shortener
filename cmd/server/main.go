@@ -11,13 +11,24 @@ import (
 	"syscall"
 	"time"
 
+	_ "time/tzdata"
+
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/katatrina/url-shortener/internal/click"
 	"github.com/katatrina/url-shortener/internal/config"
 	"github.com/katatrina/url-shortener/internal/link"
 	"github.com/katatrina/url-shortener/internal/logger"
 	"github.com/katatrina/url-shortener/internal/router"
 	"github.com/katatrina/url-shortener/internal/token"
 	"github.com/katatrina/url-shortener/internal/user"
+)
+
+const (
+	clickBufferSize    = 1024
+	clickBatchSize     = 100
+	clickFlushInterval = 5 * time.Second
+
+	geoipDBPath = "geoip/dbip-country-lite.mmdb"
 )
 
 func main() {
@@ -51,10 +62,37 @@ func run() error {
 	}
 	slog.Info("connected to db")
 
-	tokenIssuer := token.NewIssuer(cfg.JWTSecret, cfg.JWTTTL)
+	countryResolver := click.CountryResolver(click.NoopResolver{})
+	if geo, err := click.NewMMDBResolver(geoipDBPath); err != nil {
+		slog.Warn("geoip disabled: cannot open database",
+			slog.String("path", geoipDBPath),
+			slog.Any("error", err),
+		)
+	} else {
+		countryResolver = geo
+		defer func() {
+			if err := geo.Close(); err != nil {
+				slog.Warn("closing geoip database failed", slog.Any("error", err))
+			}
+		}()
+		slog.Info("geoip enabled", "path", geoipDBPath)
+	}
 
+	clickPipeline := click.NewPipeline(click.NewWriter(db), countryResolver,
+		clickBufferSize, clickBatchSize, clickFlushInterval)
+
+	pipelineCtx, stopPipeline := context.WithCancel(context.Background())
+	defer stopPipeline()
+	pipelineDone := make(chan struct{})
+	go func() {
+		clickPipeline.Run(pipelineCtx)
+		close(pipelineDone)
+	}()
+
+	tokenIssuer := token.NewIssuer(cfg.JWTSecret, cfg.JWTTTL)
 	userHandler := user.NewHandler(user.NewService(user.NewRepository(db), tokenIssuer))
-	linkHandler := link.NewHandler(link.NewService(link.NewRepository(db), cfg.MaxLinksPerUser), cfg.ShortURLBase)
+	linkSvc := link.NewService(link.NewRepository(db), cfg.MaxLinksPerUser)
+	linkHandler := link.NewHandler(linkSvc, cfg.ShortURLBase, clickPipeline)
 
 	r := router.New(cfg, userHandler, linkHandler, tokenIssuer)
 
@@ -62,8 +100,6 @@ func run() error {
 		Addr:    ":8080",
 		Handler: r,
 
-		// Max time the server waits to finish reading request headers,
-		// guarding against clients that trickle headers (classic Slowloris).
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
@@ -90,11 +126,15 @@ func run() error {
 	defer cancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		_ = srv.Close()
 		slog.Warn("graceful shutdown failed", "error", err)
 	} else {
 		slog.Info("server stopped")
 	}
+
+	slog.Info("draining click pipeline...")
+	stopPipeline()
+	<-pipelineDone
+	slog.Info("click pipeline drained")
 
 	return nil
 }

@@ -69,19 +69,36 @@ func (r *Repository) FindBySlug(ctx context.Context, slug string) (*Link, error)
 	return &link, nil
 }
 
-func (r *Repository) ListByUserID(ctx context.Context, userID string) ([]Link, error) {
+func (r *Repository) FindByIDAndUserID(ctx context.Context, id, userID string) (*Link, error) {
 	query := `
 		SELECT id, user_id, slug, destination_url, title, is_custom_slug, created_at, updated_at
 		FROM links
-		WHERE user_id = $1
-		ORDER BY created_at DESC
+		WHERE id = $1 AND user_id = $2
+	`
+
+	rows, _ := r.db.Query(ctx, query, id, userID)
+	link, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[Link])
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrLinkNotFound
+		}
+		return nil, err
+	}
+
+	return &link, nil
+}
+
+func (r *Repository) List(ctx context.Context, userID string) ([]LinkListItem, error) {
+	query := `
+		SELECT l.*, (SELECT count(*) FROM clicks WHERE clicks.link_id = l.id) AS click_count
+		FROM links l WHERE l.user_id = $1 ORDER BY l.created_at DESC;
 	`
 
 	rows, _ := r.db.Query(ctx, query, userID)
-	return pgx.CollectRows(rows, pgx.RowToStructByName[Link])
+	return pgx.CollectRows(rows, pgx.RowToStructByName[LinkListItem])
 }
 
-func (r *Repository) CountByUserID(ctx context.Context, userID string) (int64, error) {
+func (r *Repository) Count(ctx context.Context, userID string) (int64, error) {
 	query := `SELECT count(*) FROM links WHERE user_id = $1`
 
 	var count int64
@@ -114,7 +131,7 @@ func (r *Repository) Update(ctx context.Context, arg UpdateLinkParams) (*Link, e
 	return &link, nil
 }
 
-func (r *Repository) DeleteByIDAndUserID(ctx context.Context, id, userID string) error {
+func (r *Repository) Delete(ctx context.Context, id, userID string) error {
 	query := `DELETE FROM links WHERE id = $1 AND user_id = $2`
 
 	tag, err := r.db.Exec(ctx, query, id, userID)

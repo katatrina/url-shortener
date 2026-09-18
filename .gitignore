@@ -21,6 +21,12 @@ coverage.*
 .idea/
 .claude/
 
+# Tooling
+dbml-error.log
+
+# GeoIP database (downloaded via `make geoip`, monthly, not committed)
+geoip/*.mmdb
+
 # OS
 .DS_Store
 Thumbs.db

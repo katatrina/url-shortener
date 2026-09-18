@@ -28,9 +28,6 @@ func NewIssuer(secret string, ttl time.Duration) *Issuer {
 	}
 }
 
-// Issue returns the signed token and its lifetime. The lifetime is relative
-// on purpose: clients derive their own deadline from it, so a skewed client
-// clock cannot make a valid token look expired (or vice versa).
 func (i *Issuer) Issue(userID string) (string, time.Duration, error) {
 	now := time.Now()
 	expiresAt := now.Add(i.ttl)
