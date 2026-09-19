@@ -50,12 +50,6 @@ func (h *Handler) CreateLink(c *gin.Context) error {
 		return err
 	}
 
-	slog.InfoContext(c.Request.Context(), "link created",
-		slog.String("link_id", link.ID),
-		slog.String("slug", link.Slug),
-		slog.String("user_id", link.UserID),
-	)
-
 	return response.Success(c, http.StatusCreated, newLinkResponse(link, h.shortURLBase))
 }
 
