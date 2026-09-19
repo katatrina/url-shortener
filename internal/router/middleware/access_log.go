@@ -29,9 +29,6 @@ func AccessLog() gin.HandlerFunc {
 		if query != "" {
 			attrs = append(attrs, "query", query)
 		}
-		if len(c.Errors) > 0 {
-			attrs = append(attrs, "errors", c.Errors.String())
-		}
 
 		switch {
 		case status >= 500:
