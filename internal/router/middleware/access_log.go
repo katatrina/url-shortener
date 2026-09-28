@@ -19,24 +19,25 @@ func AccessLog() gin.HandlerFunc {
 		ctx := c.Request.Context()
 		status := c.Writer.Status()
 
-		attrs := []any{
-			"method", method,
-			"path", path,
-			"status", status,
-			"duration_ms", float64(time.Since(start).Microseconds()) / 1000,
-			"client_ip", c.ClientIP(),
+		attrs := []slog.Attr{
+			slog.String("method", method),
+			slog.String("path", path),
+			slog.Int("status", status),
+			slog.Float64("duration_ms", float64(time.Since(start).Microseconds())/1000),
+			slog.String("client_ip", c.ClientIP()),
 		}
 		if query != "" {
-			attrs = append(attrs, "query", query)
+			attrs = append(attrs, slog.String("query", query))
 		}
 
+		level := slog.LevelInfo
 		switch {
 		case status >= 500:
-			slog.ErrorContext(ctx, "request completed", attrs...)
+			level = slog.LevelError
 		case status >= 400:
-			slog.WarnContext(ctx, "request completed", attrs...)
-		default:
-			slog.InfoContext(ctx, "request completed", attrs...)
+			level = slog.LevelWarn
 		}
+
+		slog.LogAttrs(ctx, level, "request completed", attrs...)
 	}
 }

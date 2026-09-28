@@ -33,7 +33,7 @@ const (
 
 func main() {
 	if err := run(); err != nil {
-		slog.Error("application error", "error", err)
+		slog.Error("application error", slog.Any("error", err))
 		os.Exit(1)
 	}
 }
@@ -75,7 +75,7 @@ func run() error {
 				slog.Warn("closing geoip database failed", slog.Any("error", err))
 			}
 		}()
-		slog.Info("geoip enabled", "path", geoipDBPath)
+		slog.Info("geoip enabled", slog.String("path", geoipDBPath))
 	}
 
 	clickPipeline := click.NewPipeline(click.NewWriter(db), countryResolver,
@@ -105,7 +105,7 @@ func run() error {
 
 	serverErr := make(chan error)
 	go func() {
-		slog.Info("server starting", "addr", srv.Addr)
+		slog.Info("server starting", slog.String("addr", srv.Addr))
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			serverErr <- err
 		}
@@ -126,7 +126,7 @@ func run() error {
 	defer cancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		slog.Warn("graceful shutdown failed", "error", err)
+		slog.Warn("graceful shutdown failed", slog.Any("error", err))
 	} else {
 		slog.Info("server stopped")
 	}

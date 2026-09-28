@@ -19,10 +19,10 @@ func Recovery() gin.HandlerFunc {
 			ctx := c.Request.Context()
 
 			slog.ErrorContext(ctx, "panic recovered",
-				"method", c.Request.Method,
-				"path", c.Request.URL.Path,
-				"panic", r,
-				"stack", string(debug.Stack()),
+				slog.String("method", c.Request.Method),
+				slog.String("path", c.Request.URL.Path),
+				slog.Any("panic", r),
+				slog.String("stack", string(debug.Stack())),
 			)
 
 			response.Internal(c)
