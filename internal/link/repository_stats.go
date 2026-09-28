@@ -2,6 +2,7 @@ package link
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -46,8 +47,27 @@ const clickStatsTopReferrers = `
 	LIMIT $4
 `
 
-func (r *Repository) ClickStats(ctx context.Context, q ClickStatsQuery) (*ClickStats, error) {
-	var stats ClickStats
+type ClickStatsQuery struct {
+	LinkID       string
+	From         time.Time
+	To           time.Time
+	PreviousFrom time.Time
+	PreviousTo   time.Time
+	Bucket       string
+	Timezone     string
+	TopN         int
+}
+
+type ClickStats struct {
+	LinkID       string
+	Summary      ClickSummary
+	Timeseries   []TimePoint
+	TopCountries []DimensionCount
+	TopReferrers []DimensionCount
+}
+
+func (r *Repository) AggregateClicks(ctx context.Context, arg ClickStatsQuery) (*ClickStats, error) {
+	stats := ClickStats{LinkID: arg.LinkID}
 
 	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{
 		IsoLevel:   pgx.RepeatableRead,
@@ -60,7 +80,7 @@ func (r *Repository) ClickStats(ctx context.Context, q ClickStatsQuery) (*ClickS
 		_ = tx.Rollback(ctx)
 	}()
 
-	err = tx.QueryRow(ctx, clickStatsSummary, q.LinkID, q.From, q.To, q.PreviousFrom, q.PreviousTo).Scan(
+	err = tx.QueryRow(ctx, clickStatsSummary, arg.LinkID, arg.From, arg.To, arg.PreviousFrom, arg.PreviousTo).Scan(
 		&stats.Summary.Clicks,
 		&stats.Summary.PreviousClicks,
 	)
@@ -68,19 +88,19 @@ func (r *Repository) ClickStats(ctx context.Context, q ClickStatsQuery) (*ClickS
 		return nil, err
 	}
 
-	rows, _ := tx.Query(ctx, clickStatsTimeseries, q.LinkID, q.From, q.To, q.Bucket, q.Timezone)
+	rows, _ := tx.Query(ctx, clickStatsTimeseries, arg.LinkID, arg.From, arg.To, arg.Bucket, arg.Timezone)
 	stats.Timeseries, err = pgx.CollectRows(rows, pgx.RowToStructByName[TimePoint])
 	if err != nil {
 		return nil, err
 	}
 
-	rows, _ = tx.Query(ctx, clickStatsTopCountries, q.LinkID, q.From, q.To, q.TopN)
+	rows, _ = tx.Query(ctx, clickStatsTopCountries, arg.LinkID, arg.From, arg.To, arg.TopN)
 	stats.TopCountries, err = pgx.CollectRows(rows, pgx.RowToStructByName[DimensionCount])
 	if err != nil {
 		return nil, err
 	}
 
-	rows, _ = tx.Query(ctx, clickStatsTopReferrers, q.LinkID, q.From, q.To, q.TopN)
+	rows, _ = tx.Query(ctx, clickStatsTopReferrers, arg.LinkID, arg.From, arg.To, arg.TopN)
 	stats.TopReferrers, err = pgx.CollectRows(rows, pgx.RowToStructByName[DimensionCount])
 	if err != nil {
 		return nil, err

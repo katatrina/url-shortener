@@ -12,7 +12,7 @@ import (
 
 type Environment string
 
-var (
+const (
 	EnvLocal      Environment = "local"
 	EnvProduction Environment = "production"
 )

@@ -17,7 +17,7 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
 
-type InsertLinkParams struct {
+type InsertLinkCommand struct {
 	ID             string
 	UserID         string
 	Slug           string
@@ -26,7 +26,7 @@ type InsertLinkParams struct {
 	IsCustomSlug   bool
 }
 
-func (r *Repository) Insert(ctx context.Context, arg InsertLinkParams) (*Link, error) {
+func (r *Repository) Insert(ctx context.Context, arg InsertLinkCommand) (*Link, error) {
 	query := `
 		INSERT INTO links (id, user_id, slug, destination_url, title, is_custom_slug)
 		VALUES ($1, $2, $3, $4, $5, $6)
@@ -109,7 +109,14 @@ func (r *Repository) Count(ctx context.Context, userID string) (int64, error) {
 	return count, nil
 }
 
-func (r *Repository) Update(ctx context.Context, arg UpdateLinkParams) (*Link, error) {
+type UpdateLinkCommand struct {
+	ID             string
+	UserID         string
+	DestinationURL *string // nil = unchanged
+	Title          *string // nil = unchanged, "" = clear
+}
+
+func (r *Repository) Update(ctx context.Context, arg UpdateLinkCommand) (*Link, error) {
 	query := `
 		UPDATE links
 		SET destination_url = COALESCE($3, destination_url),
