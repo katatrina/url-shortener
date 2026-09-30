@@ -82,7 +82,7 @@ func mapTag(tag string) apperror.FieldErrorCode {
 	switch tag {
 	case "required":
 		return apperror.FieldCodeRequired
-	case "email", "http_url":
+	case "email", "http_url", "slug":
 		return apperror.FieldCodeFormatInvalid
 	case "min", "gte":
 		return apperror.FieldCodeTooShort
