@@ -114,7 +114,7 @@ func newListLinksResponse(links []LinkListItem, shortURLBase string) ListLinksRe
 
 		items = append(items, LinkListItemResponse{
 			LinkResponse: newLinkResponse(&l.Link, shortURLBase),
-			Clicks:       l.ClickCount,
+			Clicks:       l.Clicks,
 		})
 	}
 	return ListLinksResponse{Items: items}

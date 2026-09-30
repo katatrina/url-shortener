@@ -90,7 +90,8 @@ func (r *Repository) FindByIDAndUserID(ctx context.Context, id, userID string) (
 
 func (r *Repository) List(ctx context.Context, userID string) ([]LinkListItem, error) {
 	query := `
-		SELECT l.*, (SELECT count(*) FROM clicks WHERE clicks.link_id = l.id) AS click_count
+		SELECT l.id, l.user_id, l.slug, l.destination_url, l.title, l.is_custom_slug, l.created_at, l.updated_at,
+		       (SELECT count(*) FROM clicks WHERE clicks.link_id = l.id) AS clicks
 		FROM links l WHERE l.user_id = $1 ORDER BY l.created_at DESC;
 	`
 
