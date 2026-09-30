@@ -234,12 +234,7 @@ type UpdateLinkParams struct {
 }
 
 func (s *Service) UpdateLink(ctx context.Context, arg UpdateLinkParams) (*Link, error) {
-	link, err := s.linkRepo.Update(ctx, UpdateLinkCommand{
-		ID:             arg.ID,
-		UserID:         arg.UserID,
-		DestinationURL: arg.DestinationURL,
-		Title:          arg.Title,
-	})
+	link, err := s.linkRepo.Update(ctx, UpdateLinkCommand(arg))
 	if err != nil {
 		return nil, fmt.Errorf("update link: %w", err)
 	}
