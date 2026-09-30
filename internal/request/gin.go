@@ -44,7 +44,7 @@ func ShouldBindJSON(c *gin.Context, obj any) error {
 			return apperror.New(http.StatusUnprocessableEntity, apperror.CodeValidationFailed,
 				"Validation failed", apperror.FieldError{
 					Field:   typeErr.Field,
-					Code:    apperror.FieldCodeInvalidFormat,
+					Code:    apperror.FieldCodeFormatInvalid,
 					Message: typeErr.Field + " has an invalid type",
 				})
 		}

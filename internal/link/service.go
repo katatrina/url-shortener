@@ -77,7 +77,7 @@ func (s *Service) createWithGeneratedSlug(ctx context.Context, arg CreateLinkPar
 		return link, nil
 	}
 
-	return nil, fmt.Errorf("failed to generate a unique slug after %d retries", maxSlugRetries)
+	return nil, fmt.Errorf("generate unique slug: %d retries exhausted", maxSlugRetries)
 }
 
 func (s *Service) createWithCustomSlug(ctx context.Context, arg CreateLinkParams) (*Link, error) {
@@ -160,7 +160,7 @@ func (s *Service) GetLinkStats(ctx context.Context, arg GetLinkStatsParams) (*Li
 		TopN:         topDimensionLimit,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("read link stats: %w", err)
+		return nil, fmt.Errorf("aggregate clicks: %w", err)
 	}
 
 	linkStats := &LinkStats{

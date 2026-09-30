@@ -83,7 +83,7 @@ func (s *Service) Login(ctx context.Context, arg LoginParams) (*LoginResult, err
 
 	accessToken, expiresIn, err := s.tokenIssuer.Issue(user.ID)
 	if err != nil {
-		return nil, fmt.Errorf("create token: %w", err)
+		return nil, fmt.Errorf("issue token: %w", err)
 	}
 
 	return &LoginResult{
