@@ -27,7 +27,7 @@ type Link struct {
 
 type LinkListItem struct {
 	Link
-	ClickCount int64 `db:"click_count"`
+	Clicks int64 `db:"clicks"`
 }
 
 type ClickSummary struct {
