@@ -8,7 +8,7 @@ import (
 	"github.com/lmittmann/tint"
 )
 
-// Setup .
+// Setup installs the default slog logger: JSON in production, tint otherwise.
 func Setup(level string, production bool) {
 	var logLevel slog.Level
 	switch level {

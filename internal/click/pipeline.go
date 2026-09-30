@@ -30,7 +30,7 @@ type Event struct {
 	CountryCode  string
 }
 
-func NewEvent(linkID string, ip string, referrer string, userAgent string) Event {
+func NewEvent(linkID, ip, referrer, userAgent string) Event {
 	id, _ := uuid.NewV7()
 	addr, _ := netip.ParseAddr(ip)
 	addr = addr.Unmap()
@@ -136,7 +136,8 @@ func (p *Pipeline) flush(batch *[]Event) {
 		slog.Error("click batch write failed",
 			slog.Int("count", len(events)),
 			slog.Uint64("failed_total", p.writeFailed.Load()),
-			slog.Any("error", err))
+			slog.Any("error", err),
+		)
 	}
 
 	*batch = (*batch)[:0]
