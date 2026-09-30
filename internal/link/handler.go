@@ -50,7 +50,9 @@ func (h *Handler) CreateLink(c *gin.Context) error {
 		return err
 	}
 
-	return response.Success(c, http.StatusCreated, newLinkResponse(link, h.shortURLBase))
+	res := newLinkResponse(link, h.shortURLBase)
+
+	return response.Success(c, http.StatusCreated, res)
 }
 
 func (h *Handler) GetLinkStats(c *gin.Context) error {
@@ -64,7 +66,7 @@ func (h *Handler) GetLinkStats(c *gin.Context) error {
 		return err
 	}
 
-	loc, err := parseTimezone(c.Query("tz"))
+	loc, err := parseStatsTimezone(c.Query("tz"))
 	if err != nil {
 		return err
 	}
@@ -79,7 +81,9 @@ func (h *Handler) GetLinkStats(c *gin.Context) error {
 		return err
 	}
 
-	return response.Success(c, http.StatusOK, newLinkStatsResponse(stats, rng, loc))
+	res := newLinkStatsResponse(stats, rng, loc)
+
+	return response.Success(c, http.StatusOK, res)
 }
 
 func parseStatsRange(val string) (string, error) {
@@ -101,7 +105,7 @@ func parseStatsRange(val string) (string, error) {
 		})
 }
 
-func parseTimezone(val string) (*time.Location, error) {
+func parseStatsTimezone(val string) (*time.Location, error) {
 	val = strings.TrimSpace(val)
 	if val == "" {
 		return time.UTC, nil
@@ -141,7 +145,9 @@ func (h *Handler) ListLinks(c *gin.Context) error {
 		return err
 	}
 
-	return response.Success(c, http.StatusOK, newListLinksResponse(links, h.shortURLBase))
+	res := newListLinksResponse(links, h.shortURLBase)
+
+	return response.Success(c, http.StatusOK, res)
 }
 
 func (h *Handler) UpdateLink(c *gin.Context) error {
@@ -170,7 +176,9 @@ func (h *Handler) UpdateLink(c *gin.Context) error {
 		return err
 	}
 
-	return response.Success(c, http.StatusOK, newLinkResponse(link, h.shortURLBase))
+	res := newLinkResponse(link, h.shortURLBase)
+
+	return response.Success(c, http.StatusOK, res)
 }
 
 func (h *Handler) DeleteLink(c *gin.Context) error {

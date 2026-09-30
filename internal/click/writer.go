@@ -69,7 +69,7 @@ func (w *Writer) WriteBatch(ctx context.Context, events []Event) error {
 	}
 
 	if skipped := len(events) - int(tag.RowsAffected()); skipped > 0 {
-		slog.Warn("click events not inserted",
+		slog.WarnContext(ctx, "click events not inserted",
 			slog.Int("count", skipped),
 		)
 	}

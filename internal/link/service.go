@@ -38,7 +38,7 @@ func (s *Service) CreateLink(ctx context.Context, arg CreateLinkParams) (*Link, 
 	// There is a very little chance of race condition here. But it's fine.
 	count, err := s.linkRepo.Count(ctx, arg.UserID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to count user links: %w", err)
+		return nil, fmt.Errorf("count user links: %w", err)
 	}
 	if count >= int64(s.maxLinksPerUser) {
 		return nil, ErrLinkQuotaExceeded
@@ -51,11 +51,11 @@ func (s *Service) CreateLink(ctx context.Context, arg CreateLinkParams) (*Link, 
 }
 
 func (s *Service) createWithGeneratedSlug(ctx context.Context, arg CreateLinkParams) (*Link, error) {
-	for n := range maxSlugRetries {
+	for attempt := range maxSlugRetries {
 		generatedSlug := slug.Generate()
 		id, _ := uuid.NewV7()
 
-		link, err := s.linkRepo.Insert(ctx, InsertLinkParams{
+		link, err := s.linkRepo.Insert(ctx, InsertLinkCommand{
 			ID:             id.String(),
 			UserID:         arg.UserID,
 			Slug:           generatedSlug,
@@ -67,11 +67,11 @@ func (s *Service) createWithGeneratedSlug(ctx context.Context, arg CreateLinkPar
 			if errors.Is(err, ErrSlugExists) {
 				slog.WarnContext(ctx, "slug collision, retrying",
 					slog.String("slug", generatedSlug),
-					slog.Int("attempt", n+1),
+					slog.Int("attempt", attempt+1),
 				)
 				continue
 			}
-			return nil, err
+			return nil, fmt.Errorf("insert link: %w", err)
 		}
 
 		return link, nil
@@ -82,7 +82,7 @@ func (s *Service) createWithGeneratedSlug(ctx context.Context, arg CreateLinkPar
 
 func (s *Service) createWithCustomSlug(ctx context.Context, arg CreateLinkParams) (*Link, error) {
 	id, _ := uuid.NewV7()
-	return s.linkRepo.Insert(ctx, InsertLinkParams{
+	link, err := s.linkRepo.Insert(ctx, InsertLinkCommand{
 		ID:             id.String(),
 		UserID:         arg.UserID,
 		Slug:           *arg.Slug,
@@ -90,14 +90,29 @@ func (s *Service) createWithCustomSlug(ctx context.Context, arg CreateLinkParams
 		Title:          arg.Title,
 		IsCustomSlug:   true,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("insert link: %w", err)
+	}
+
+	return link, nil
 }
 
 func (s *Service) ResolveSlug(ctx context.Context, slug string) (*Link, error) {
-	return s.linkRepo.FindBySlug(ctx, slug)
+	link, err := s.linkRepo.FindBySlug(ctx, slug)
+	if err != nil {
+		return nil, fmt.Errorf("find link by slug: %w", err)
+	}
+
+	return link, nil
 }
 
 func (s *Service) ListLinks(ctx context.Context, userID string) ([]LinkListItem, error) {
-	return s.linkRepo.List(ctx, userID)
+	links, err := s.linkRepo.List(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list links: %w", err)
+	}
+
+	return links, nil
 }
 
 type GetLinkStatsParams struct {
@@ -126,45 +141,45 @@ type LinkStats struct {
 func (s *Service) GetLinkStats(ctx context.Context, arg GetLinkStatsParams) (*LinkStats, error) {
 	link, err := s.linkRepo.FindByIDAndUserID(ctx, arg.LinkID, arg.UserID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("find link: %w", err)
 	}
 
-	w, ok := newStatsWindow(arg.Range, arg.Location)
+	window, ok := newStatsWindow(arg.Range, arg.Location)
 	if !ok {
 		return nil, fmt.Errorf("unsupported stats range %q", arg.Range)
 	}
 
-	stats, err := s.linkRepo.ClickStats(ctx, ClickStatsQuery{
+	clickStats, err := s.linkRepo.AggregateClicks(ctx, ClickStatsQuery{
 		LinkID:       arg.LinkID,
-		From:         w.From,
-		To:           w.To,
-		PreviousFrom: w.PreviousFrom,
-		PreviousTo:   w.PreviousTo,
-		Bucket:       w.Bucket,
+		From:         window.From,
+		To:           window.To,
+		PreviousFrom: window.PreviousFrom,
+		PreviousTo:   window.PreviousTo,
+		Bucket:       window.Bucket,
 		Timezone:     arg.Location.String(),
 		TopN:         topDimensionLimit,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to read link stats: %w", err)
+		return nil, fmt.Errorf("read link stats: %w", err)
 	}
 
-	out := &LinkStats{
-		LinkID:       link.ID,
-		From:         w.From,
-		To:           w.To,
-		PreviousFrom: w.PreviousFrom,
-		PreviousTo:   w.PreviousTo,
-		Granularity:  w.Bucket,
-		Clicks:       stats.Summary.Clicks,
-		Timeseries:   stats.Timeseries,
-		TopCountries: stats.TopCountries,
-		TopReferrers: stats.TopReferrers,
+	linkStats := &LinkStats{
+		LinkID:       clickStats.LinkID,
+		From:         window.From,
+		To:           window.To,
+		PreviousFrom: window.PreviousFrom,
+		PreviousTo:   window.PreviousTo,
+		Granularity:  window.Bucket,
+		Clicks:       clickStats.Summary.Clicks,
+		Timeseries:   clickStats.Timeseries,
+		TopCountries: clickStats.TopCountries,
+		TopReferrers: clickStats.TopReferrers,
 	}
-	if !link.CreatedAt.After(w.PreviousFrom) {
-		out.PreviousClicks = &stats.Summary.PreviousClicks
+	if !link.CreatedAt.After(window.PreviousFrom) {
+		linkStats.PreviousClicks = &clickStats.Summary.PreviousClicks
 	}
 
-	return out, nil
+	return linkStats, nil
 }
 
 type statsWindow struct {
@@ -219,9 +234,18 @@ type UpdateLinkParams struct {
 }
 
 func (s *Service) UpdateLink(ctx context.Context, arg UpdateLinkParams) (*Link, error) {
-	return s.linkRepo.Update(ctx, arg)
+	link, err := s.linkRepo.Update(ctx, UpdateLinkCommand(arg))
+	if err != nil {
+		return nil, fmt.Errorf("update link: %w", err)
+	}
+
+	return link, nil
 }
 
 func (s *Service) DeleteLink(ctx context.Context, id, userID string) error {
-	return s.linkRepo.Delete(ctx, id, userID)
+	if err := s.linkRepo.Delete(ctx, id, userID); err != nil {
+		return fmt.Errorf("delete link: %w", err)
+	}
+
+	return nil
 }

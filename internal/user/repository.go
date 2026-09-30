@@ -17,13 +17,13 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
 
-type InsertUserParams struct {
+type InsertUserCommand struct {
 	ID           string
 	Email        string
 	PasswordHash string
 }
 
-func (r *Repository) Insert(ctx context.Context, arg InsertUserParams) (*User, error) {
+func (r *Repository) Insert(ctx context.Context, arg InsertUserCommand) (*User, error) {
 	query := `
 		INSERT INTO users (id, email, password_hash)
 		VALUES ($1, $2, $3)

@@ -37,6 +37,14 @@ type UserResponse struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
+func newLoginResponse(r *LoginResult) LoginResponse {
+	return LoginResponse{
+		AccessToken: r.AccessToken,
+		ExpiresIn:   int64(r.ExpiresIn.Seconds()),
+		User:        newUserResponse(r.User),
+	}
+}
+
 func newUserResponse(u *User) UserResponse {
 	return UserResponse{
 		ID:        u.ID,

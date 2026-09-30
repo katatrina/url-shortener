@@ -2,6 +2,18 @@ package link
 
 import "time"
 
+const (
+	RangeLast24Hours = "24h"
+	RangeLast7Days   = "7d"
+	RangeLast30Days  = "30d"
+	RangeLast90Days  = "90d"
+)
+
+const (
+	BucketHour = "hour"
+	BucketDay  = "day"
+)
+
 type Link struct {
 	ID             string    `db:"id"`
 	UserID         string    `db:"user_id"`
@@ -18,22 +30,6 @@ type LinkListItem struct {
 	ClickCount int64 `db:"click_count"`
 }
 
-type ClickStatsQuery struct {
-	LinkID       string
-	From         time.Time
-	To           time.Time
-	PreviousFrom time.Time
-	PreviousTo   time.Time
-	Bucket       string
-	Timezone     string
-	TopN         int
-}
-
-const (
-	BucketHour = "hour"
-	BucketDay  = "day"
-)
-
 type ClickSummary struct {
 	Clicks         int64 `db:"clicks"`
 	PreviousClicks int64 `db:"previous_clicks"`
@@ -47,11 +43,4 @@ type TimePoint struct {
 type DimensionCount struct {
 	Value  *string `db:"value"`
 	Clicks int64   `db:"clicks"`
-}
-
-type ClickStats struct {
-	Summary      ClickSummary
-	Timeseries   []TimePoint
-	TopCountries []DimensionCount
-	TopReferrers []DimensionCount
 }

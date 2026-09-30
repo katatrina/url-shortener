@@ -32,7 +32,9 @@ func (h *Handler) Signup(c *gin.Context) error {
 		slog.String("user_id", user.ID),
 	)
 
-	return response.Success(c, http.StatusCreated, newUserResponse(user))
+	res := newUserResponse(user)
+
+	return response.Success(c, http.StatusCreated, res)
 }
 
 func (h *Handler) Login(c *gin.Context) error {
@@ -50,9 +52,7 @@ func (h *Handler) Login(c *gin.Context) error {
 		slog.String("user_id", result.User.ID),
 	)
 
-	return response.Success(c, http.StatusOK, LoginResponse{
-		AccessToken: result.AccessToken,
-		ExpiresIn:   int64(result.ExpiresIn.Seconds()),
-		User:        newUserResponse(result.User),
-	})
+	res := newLoginResponse(result)
+
+	return response.Success(c, http.StatusOK, res)
 }

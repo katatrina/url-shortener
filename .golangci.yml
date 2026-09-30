@@ -15,3 +15,12 @@ linters:
   enable:
     # Bật thêm gosec để quét các vấn đề bảo mật trong code
     - gosec
+    # Bật thêm sloglint để giữ các lệnh gọi log/slog nhất quán
+    - sloglint
+
+  settings:
+    sloglint:
+      # Chỉ cho phép truyền slog.Attr (slog.String, slog.Int...), cấm cặp key-value xen kẽ
+      attr-only: true
+      # Bắt buộc dùng biến thể *Context (InfoContext, ErrorContext...) khi trong scope có sẵn ctx
+      context: scope

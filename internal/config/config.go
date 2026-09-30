@@ -12,7 +12,7 @@ import (
 
 type Environment string
 
-var (
+const (
 	EnvLocal      Environment = "local"
 	EnvProduction Environment = "production"
 )
@@ -99,13 +99,13 @@ func Load() (*Config, error) {
 
 func (c *Config) Log() {
 	slog.Info("config loaded",
-		"APP_ENV", c.AppEnv,
-		"LOG_LEVEL", c.LogLevel,
-		"SHORT_URL_BASE", c.ShortURLBase,
-		"REDIRECT_HOST", c.RedirectHost,
-		"TRUSTED_PLATFORM", c.TrustedPlatform,
-		"ALLOWED_ORIGINS", c.AllowedOrigins,
-		"JWT_TTL", c.JWTTTL,
-		"MAX_LINKS_PER_USER", c.MaxLinksPerUser,
+		slog.String("APP_ENV", string(c.AppEnv)),
+		slog.String("LOG_LEVEL", c.LogLevel),
+		slog.String("SHORT_URL_BASE", c.ShortURLBase),
+		slog.String("REDIRECT_HOST", c.RedirectHost),
+		slog.String("TRUSTED_PLATFORM", c.TrustedPlatform),
+		slog.Any("ALLOWED_ORIGINS", c.AllowedOrigins),
+		slog.Duration("JWT_TTL", c.JWTTTL),
+		slog.Int("MAX_LINKS_PER_USER", c.MaxLinksPerUser),
 	)
 }

@@ -40,13 +40,6 @@ type ListLinksResponse struct {
 	Items []LinkListItemResponse `json:"items"`
 }
 
-const (
-	RangeLast24Hours = "24h"
-	RangeLast7Days   = "7d"
-	RangeLast30Days  = "30d"
-	RangeLast90Days  = "90d"
-)
-
 const defaultStatsRange = RangeLast7Days
 
 type ClickSummaryResponse struct {
@@ -150,12 +143,12 @@ func newLinkStatsResponse(s *LinkStats, rng string, loc *time.Location) LinkStat
 			PreviousClicks: s.PreviousClicks,
 		},
 		Timeseries:   timeseries,
-		TopCountries: newDimensionCounts(s.TopCountries),
-		TopReferrers: newDimensionCounts(s.TopReferrers),
+		TopCountries: newDimensionCountResponse(s.TopCountries),
+		TopReferrers: newDimensionCountResponse(s.TopReferrers),
 	}
 }
 
-func newDimensionCounts(in []DimensionCount) []DimensionCountResponse {
+func newDimensionCountResponse(in []DimensionCount) []DimensionCountResponse {
 	out := make([]DimensionCountResponse, 0, len(in))
 	for _, d := range in {
 		value := unknownDimension

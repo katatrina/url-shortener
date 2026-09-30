@@ -46,9 +46,9 @@ func writeError(c *gin.Context, err error) {
 			apperror.CodeLinkNotFound, "Link not found"))
 	default:
 		slog.ErrorContext(c.Request.Context(), "unexpected error",
-			"method", c.Request.Method,
-			"path", c.Request.URL.Path,
-			"error", err,
+			slog.String("method", c.Request.Method),
+			slog.String("path", c.Request.URL.Path),
+			slog.Any("error", err),
 		)
 		response.Internal(c)
 	}
