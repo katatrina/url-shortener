@@ -19,7 +19,7 @@ type FieldErrorCode string
 
 const (
 	FieldCodeRequired      FieldErrorCode = "REQUIRED"
-	FieldCodeInvalidFormat FieldErrorCode = "INVALID_FORMAT"
+	FieldCodeFormatInvalid FieldErrorCode = "INVALID_FORMAT"
 	FieldCodeTooShort      FieldErrorCode = "TOO_SHORT"
 	FieldCodeTooLong       FieldErrorCode = "TOO_LONG"
 	FieldCodeInvalid       FieldErrorCode = "INVALID"

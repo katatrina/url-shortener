@@ -55,6 +55,17 @@ func (h *Handler) CreateLink(c *gin.Context) error {
 	return response.Success(c, http.StatusCreated, res)
 }
 
+func (h *Handler) ListLinks(c *gin.Context) error {
+	links, err := h.linkSvc.ListLinks(c.Request.Context(), middleware.UserID(c))
+	if err != nil {
+		return err
+	}
+
+	res := newListLinksResponse(links, h.shortURLBase)
+
+	return response.Success(c, http.StatusOK, res)
+}
+
 func (h *Handler) GetLinkStats(c *gin.Context) error {
 	id, err := parseLinkID(c.Param("id"))
 	if err != nil {
@@ -82,70 +93,6 @@ func (h *Handler) GetLinkStats(c *gin.Context) error {
 	}
 
 	res := newLinkStatsResponse(stats, rng, loc)
-
-	return response.Success(c, http.StatusOK, res)
-}
-
-func parseStatsRange(val string) (string, error) {
-	val = strings.TrimSpace(val)
-	if val == "" {
-		return defaultStatsRange, nil
-	}
-
-	switch val {
-	case RangeLast24Hours, RangeLast7Days, RangeLast30Days, RangeLast90Days:
-		return val, nil
-	}
-
-	return "", apperror.New(http.StatusUnprocessableEntity, apperror.CodeValidationFailed,
-		"Validation failed", apperror.FieldError{
-			Field:   "range",
-			Code:    apperror.FieldCodeInvalid,
-			Message: "range must be one of: 24h, 7d, 30d, 90d",
-		})
-}
-
-func parseStatsTimezone(val string) (*time.Location, error) {
-	val = strings.TrimSpace(val)
-	if val == "" {
-		return time.UTC, nil
-	}
-
-	invalid := apperror.New(http.StatusUnprocessableEntity, apperror.CodeValidationFailed,
-		"Validation failed", apperror.FieldError{
-			Field:   "tz",
-			Code:    apperror.FieldCodeInvalid,
-			Message: "tz must be a valid IANA timezone name, e.g. Asia/Ho_Chi_Minh",
-		})
-
-	if val != "UTC" && !strings.Contains(val, "/") {
-		return nil, invalid
-	}
-
-	loc, err := time.LoadLocation(val)
-	if err != nil {
-		return nil, invalid
-	}
-
-	return loc, nil
-}
-
-func parseLinkID(val string) (string, error) {
-	id, err := uuid.Parse(val)
-	if err != nil {
-		return "", ErrLinkNotFound
-	}
-
-	return id.String(), nil
-}
-
-func (h *Handler) ListLinks(c *gin.Context) error {
-	links, err := h.linkSvc.ListLinks(c.Request.Context(), middleware.UserID(c))
-	if err != nil {
-		return err
-	}
-
-	res := newListLinksResponse(links, h.shortURLBase)
 
 	return response.Success(c, http.StatusOK, res)
 }
@@ -217,4 +164,57 @@ func (h *Handler) Redirect(c *gin.Context) {
 
 	e := click.NewEvent(link.ID, c.ClientIP(), c.Request.Referer(), c.Request.UserAgent())
 	h.clickRecorder.Record(e)
+}
+
+func parseLinkID(val string) (string, error) {
+	id, err := uuid.Parse(val)
+	if err != nil {
+		return "", ErrLinkNotFound
+	}
+
+	return id.String(), nil
+}
+
+func parseStatsRange(val string) (string, error) {
+	val = strings.TrimSpace(val)
+	if val == "" {
+		return defaultStatsRange, nil
+	}
+
+	switch val {
+	case RangeLast24Hours, RangeLast7Days, RangeLast30Days, RangeLast90Days:
+		return val, nil
+	}
+
+	return "", apperror.New(http.StatusUnprocessableEntity, apperror.CodeValidationFailed,
+		"Validation failed", apperror.FieldError{
+			Field:   "range",
+			Code:    apperror.FieldCodeInvalid,
+			Message: "range must be one of: 24h, 7d, 30d, 90d",
+		})
+}
+
+func parseStatsTimezone(val string) (*time.Location, error) {
+	val = strings.TrimSpace(val)
+	if val == "" {
+		return time.UTC, nil
+	}
+
+	invalid := apperror.New(http.StatusUnprocessableEntity, apperror.CodeValidationFailed,
+		"Validation failed", apperror.FieldError{
+			Field:   "tz",
+			Code:    apperror.FieldCodeInvalid,
+			Message: "tz must be a valid IANA timezone name, e.g. Asia/Ho_Chi_Minh",
+		})
+
+	if val != "UTC" && !strings.Contains(val, "/") {
+		return nil, invalid
+	}
+
+	loc, err := time.LoadLocation(val)
+	if err != nil {
+		return nil, invalid
+	}
+
+	return loc, nil
 }

@@ -63,8 +63,8 @@ func validateSlug(fl validator.FieldLevel) bool {
 }
 
 func AsValidationErrors(err error) ([]apperror.FieldError, bool) {
-	var ve validator.ValidationErrors
-	if !errors.As(err, &ve) {
+	ve, ok := errors.AsType[validator.ValidationErrors](err)
+	if !ok {
 		return nil, false
 	}
 	out := make([]apperror.FieldError, 0, len(ve))
@@ -82,16 +82,14 @@ func mapTag(tag string) apperror.FieldErrorCode {
 	switch tag {
 	case "required":
 		return apperror.FieldCodeRequired
-	case "email", "http_url":
-		return apperror.FieldCodeInvalidFormat
+	case "email", "http_url", "slug":
+		return apperror.FieldCodeFormatInvalid
 	case "min", "gte":
 		return apperror.FieldCodeTooShort
 	case "max", "lte", "max_bytes":
 		return apperror.FieldCodeTooLong
 	// case "strong_password": // disabled: relaxed password policy
 	// 	return apperror.FieldCodeWeakPassword
-	case "slug":
-		return apperror.FieldCodeInvalid
 	default:
 		return apperror.FieldCodeInvalid
 	}
