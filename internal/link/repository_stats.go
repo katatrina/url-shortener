@@ -80,15 +80,13 @@ func (r *Repository) AggregateClicks(ctx context.Context, arg ClickStatsQuery) (
 		_ = tx.Rollback(ctx)
 	}()
 
-	err = tx.QueryRow(ctx, clickStatsSummary, arg.LinkID, arg.From, arg.To, arg.PreviousFrom, arg.PreviousTo).Scan(
-		&stats.Summary.Clicks,
-		&stats.Summary.PreviousClicks,
-	)
+	rows, _ := tx.Query(ctx, clickStatsSummary, arg.LinkID, arg.From, arg.To, arg.PreviousFrom, arg.PreviousTo)
+	stats.Summary, err = pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[ClickSummary])
 	if err != nil {
 		return nil, err
 	}
 
-	rows, _ := tx.Query(ctx, clickStatsTimeseries, arg.LinkID, arg.From, arg.To, arg.Bucket, arg.Timezone)
+	rows, _ = tx.Query(ctx, clickStatsTimeseries, arg.LinkID, arg.From, arg.To, arg.Bucket, arg.Timezone)
 	stats.Timeseries, err = pgx.CollectRows(rows, pgx.RowToStructByName[TimePoint])
 	if err != nil {
 		return nil, err
