@@ -30,7 +30,8 @@ func (r *Repository) Insert(ctx context.Context, arg InsertLinkCommand) (*Link, 
 	query := `
 		INSERT INTO links (id, user_id, slug, destination_url, title, is_custom_slug)
 		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id, user_id, slug, destination_url, title, is_custom_slug, created_at, updated_at
+		RETURNING id, user_id, slug, destination_url, title, is_custom_slug, created_at, updated_at,
+		          0 AS clicks
 	`
 
 	rows, _ := r.db.Query(ctx, query,
@@ -50,30 +51,12 @@ func (r *Repository) Insert(ctx context.Context, arg InsertLinkCommand) (*Link, 
 	return &link, nil
 }
 
-func (r *Repository) FindBySlug(ctx context.Context, slug string) (*Link, error) {
-	query := `
-		SELECT id, user_id, slug, destination_url, title, is_custom_slug, created_at, updated_at
-		FROM links
-		WHERE slug = $1
-	`
-
-	rows, _ := r.db.Query(ctx, query, slug)
-	link, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[Link])
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrLinkNotFound
-		}
-		return nil, err
-	}
-
-	return &link, nil
-}
-
 func (r *Repository) FindByIDAndUserID(ctx context.Context, id, userID string) (*Link, error) {
 	query := `
-		SELECT id, user_id, slug, destination_url, title, is_custom_slug, created_at, updated_at
-		FROM links
-		WHERE id = $1 AND user_id = $2
+		SELECT l.id, l.user_id, l.slug, l.destination_url, l.title, l.is_custom_slug, l.created_at, l.updated_at,
+		       (SELECT count(*) FROM clicks WHERE clicks.link_id = l.id) AS clicks
+		FROM links l
+		WHERE l.id = $1 AND l.user_id = $2
 	`
 
 	rows, _ := r.db.Query(ctx, query, id, userID)
@@ -88,15 +71,55 @@ func (r *Repository) FindByIDAndUserID(ctx context.Context, id, userID string) (
 	return &link, nil
 }
 
-func (r *Repository) List(ctx context.Context, userID string) ([]LinkListItem, error) {
+func (r *Repository) FindRowByIDAndUserID(ctx context.Context, id, userID string) (*LinkRow, error) {
+	query := `
+		SELECT id, user_id, slug, destination_url, title, is_custom_slug, created_at, updated_at
+		FROM links
+		WHERE id = $1 AND user_id = $2
+	`
+
+	rows, _ := r.db.Query(ctx, query, id, userID)
+	row, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[LinkRow])
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrLinkNotFound
+		}
+		return nil, err
+	}
+
+	return &row, nil
+}
+
+func (r *Repository) FindRowBySlug(ctx context.Context, slug string) (*LinkRow, error) {
+	query := `
+		SELECT id, user_id, slug, destination_url, title, is_custom_slug, created_at, updated_at
+		FROM links
+		WHERE slug = $1
+	`
+
+	rows, _ := r.db.Query(ctx, query, slug)
+	row, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[LinkRow])
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrLinkNotFound
+		}
+		return nil, err
+	}
+
+	return &row, nil
+}
+
+func (r *Repository) List(ctx context.Context, userID string) ([]Link, error) {
 	query := `
 		SELECT l.id, l.user_id, l.slug, l.destination_url, l.title, l.is_custom_slug, l.created_at, l.updated_at,
 		       (SELECT count(*) FROM clicks WHERE clicks.link_id = l.id) AS clicks
-		FROM links l WHERE l.user_id = $1 ORDER BY l.created_at DESC;
+		FROM links l
+		WHERE l.user_id = $1
+		ORDER BY l.created_at DESC
 	`
 
 	rows, _ := r.db.Query(ctx, query, userID)
-	return pgx.CollectRows(rows, pgx.RowToStructByName[LinkListItem])
+	return pgx.CollectRows(rows, pgx.RowToStructByName[Link])
 }
 
 func (r *Repository) Count(ctx context.Context, userID string) (int64, error) {
@@ -124,7 +147,8 @@ func (r *Repository) Update(ctx context.Context, arg UpdateLinkCommand) (*Link, 
 		    title           = COALESCE($4, title),
 		    updated_at      = now()
 		WHERE id = $1 AND user_id = $2
-		RETURNING id, user_id, slug, destination_url, title, is_custom_slug, created_at, updated_at
+		RETURNING id, user_id, slug, destination_url, title, is_custom_slug, created_at, updated_at,
+		          (SELECT count(*) FROM clicks WHERE clicks.link_id = links.id) AS clicks
 	`
 
 	rows, _ := r.db.Query(ctx, query, arg.ID, arg.UserID, arg.DestinationURL, arg.Title)

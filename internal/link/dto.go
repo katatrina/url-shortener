@@ -27,17 +27,13 @@ type LinkResponse struct {
 	DestinationURL string    `json:"destinationUrl"`
 	Title          string    `json:"title"`
 	IsCustomSlug   bool      `json:"isCustomSlug"`
+	Clicks         int64     `json:"clicks"`
 	CreatedAt      time.Time `json:"createdAt"`
 	UpdatedAt      time.Time `json:"updatedAt"`
 }
 
-type LinkListItemResponse struct {
-	LinkResponse
-	Clicks int64 `json:"clicks"`
-}
-
 type ListLinksResponse struct {
-	Items []LinkListItemResponse `json:"items"`
+	Items []LinkResponse `json:"items"`
 }
 
 const defaultStatsRange = RangeLast7Days
@@ -102,20 +98,16 @@ func newLinkResponse(l *Link, shortURLBase string) LinkResponse {
 		DestinationURL: l.DestinationURL,
 		Title:          l.Title,
 		IsCustomSlug:   l.IsCustomSlug,
+		Clicks:         l.Clicks,
 		CreatedAt:      l.CreatedAt.UTC(),
 		UpdatedAt:      l.UpdatedAt.UTC(),
 	}
 }
 
-func newListLinksResponse(links []LinkListItem, shortURLBase string) ListLinksResponse {
-	items := make([]LinkListItemResponse, 0, len(links))
+func newListLinksResponse(links []Link, shortURLBase string) ListLinksResponse {
+	items := make([]LinkResponse, 0, len(links))
 	for i := range links {
-		l := &links[i]
-
-		items = append(items, LinkListItemResponse{
-			LinkResponse: newLinkResponse(&l.Link, shortURLBase),
-			Clicks:       l.Clicks,
-		})
+		items = append(items, newLinkResponse(&links[i], shortURLBase))
 	}
 	return ListLinksResponse{Items: items}
 }

@@ -14,7 +14,8 @@ const (
 	BucketDay  = "day"
 )
 
-type Link struct {
+// LinkRow mirrors one row of the links table.
+type LinkRow struct {
 	ID             string    `db:"id"`
 	UserID         string    `db:"user_id"`
 	Slug           string    `db:"slug"`
@@ -25,8 +26,9 @@ type Link struct {
 	UpdatedAt      time.Time `db:"updated_at"`
 }
 
-type LinkListItem struct {
-	Link
+// Link is a link with its all-time click count.
+type Link struct {
+	LinkRow
 	Clicks int64 `db:"clicks"`
 }
 

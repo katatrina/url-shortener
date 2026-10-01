@@ -97,22 +97,31 @@ func (s *Service) createWithCustomSlug(ctx context.Context, arg CreateLinkParams
 	return link, nil
 }
 
-func (s *Service) ResolveSlug(ctx context.Context, slug string) (*Link, error) {
-	link, err := s.linkRepo.FindBySlug(ctx, slug)
+func (s *Service) ResolveSlug(ctx context.Context, slug string) (*LinkRow, error) {
+	row, err := s.linkRepo.FindRowBySlug(ctx, slug)
 	if err != nil {
-		return nil, fmt.Errorf("find link by slug: %w", err)
+		return nil, fmt.Errorf("find link row by slug: %w", err)
 	}
 
-	return link, nil
+	return row, nil
 }
 
-func (s *Service) ListLinks(ctx context.Context, userID string) ([]LinkListItem, error) {
+func (s *Service) ListLinks(ctx context.Context, userID string) ([]Link, error) {
 	links, err := s.linkRepo.List(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("list links: %w", err)
 	}
 
 	return links, nil
+}
+
+func (s *Service) GetLink(ctx context.Context, id, userID string) (*Link, error) {
+	link, err := s.linkRepo.FindByIDAndUserID(ctx, id, userID)
+	if err != nil {
+		return nil, fmt.Errorf("find link: %w", err)
+	}
+
+	return link, nil
 }
 
 type GetLinkStatsParams struct {
@@ -139,9 +148,9 @@ type LinkStats struct {
 }
 
 func (s *Service) GetLinkStats(ctx context.Context, arg GetLinkStatsParams) (*LinkStats, error) {
-	link, err := s.linkRepo.FindByIDAndUserID(ctx, arg.LinkID, arg.UserID)
+	row, err := s.linkRepo.FindRowByIDAndUserID(ctx, arg.LinkID, arg.UserID)
 	if err != nil {
-		return nil, fmt.Errorf("find link: %w", err)
+		return nil, fmt.Errorf("find link row: %w", err)
 	}
 
 	window, ok := newStatsWindow(arg.Range, arg.Location)
@@ -175,7 +184,7 @@ func (s *Service) GetLinkStats(ctx context.Context, arg GetLinkStatsParams) (*Li
 		TopCountries: clickStats.TopCountries,
 		TopReferrers: clickStats.TopReferrers,
 	}
-	if !link.CreatedAt.After(window.PreviousFrom) {
+	if !row.CreatedAt.After(window.PreviousFrom) {
 		linkStats.PreviousClicks = &clickStats.Summary.PreviousClicks
 	}
 

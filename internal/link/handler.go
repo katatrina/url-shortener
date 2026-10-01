@@ -66,6 +66,22 @@ func (h *Handler) ListLinks(c *gin.Context) error {
 	return response.Success(c, http.StatusOK, res)
 }
 
+func (h *Handler) GetLink(c *gin.Context) error {
+	id, err := parseLinkID(c.Param("id"))
+	if err != nil {
+		return err
+	}
+
+	link, err := h.linkSvc.GetLink(c.Request.Context(), id, middleware.UserID(c))
+	if err != nil {
+		return err
+	}
+
+	res := newLinkResponse(link, h.shortURLBase)
+
+	return response.Success(c, http.StatusOK, res)
+}
+
 func (h *Handler) GetLinkStats(c *gin.Context) error {
 	id, err := parseLinkID(c.Param("id"))
 	if err != nil {
