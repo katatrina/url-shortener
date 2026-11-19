@@ -9,7 +9,7 @@ import (
 )
 
 // Setup installs the default slog logger: JSON in production, tint otherwise.
-func Setup(level string, production bool) {
+func Setup(level string, prod bool) {
 	var logLevel slog.Level
 	switch level {
 	case "debug":
@@ -23,7 +23,7 @@ func Setup(level string, production bool) {
 	}
 
 	var handler slog.Handler
-	if production {
+	if prod {
 		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 			Level: logLevel,
 		})

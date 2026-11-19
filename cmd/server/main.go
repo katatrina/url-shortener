@@ -44,7 +44,7 @@ func run() error {
 		return fmt.Errorf("load config: %w", err)
 	}
 
-	logger.Setup(cfg.LogLevel, cfg.AppEnv.IsProduction())
+	logger.Setup(cfg.LogLevel, cfg.Env.IsProd())
 	cfg.Log()
 
 	db, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
