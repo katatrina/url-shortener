@@ -13,25 +13,25 @@ import (
 type Environment string
 
 const (
-	EnvLocal      Environment = "local"
-	EnvProduction Environment = "production"
+	EnvLocal Environment = "local"
+	EnvProd  Environment = "prod"
 )
 
 func (e Environment) IsValid() bool {
 	switch e {
-	case EnvLocal, EnvProduction:
+	case EnvLocal, EnvProd:
 		return true
 	}
 
 	return false
 }
 
-func (e Environment) IsProduction() bool {
-	return e == EnvProduction
+func (e Environment) IsProd() bool {
+	return e == EnvProd
 }
 
 type Config struct {
-	AppEnv      Environment   `env:"APP_ENV,required"`
+	Env         Environment   `env:"ENV,required"`
 	DatabaseURL string        `env:"DATABASE_URL,required"`
 	LogLevel    string        `env:"LOG_LEVEL,required"`
 	JWTSecret   string        `env:"JWT_SECRET,required"`
@@ -61,8 +61,8 @@ type Config struct {
 }
 
 func (c *Config) Validate() error {
-	if !c.AppEnv.IsValid() {
-		return fmt.Errorf("invalid APP_ENV %q (must be 'local' or 'production')", c.AppEnv)
+	if !c.Env.IsValid() {
+		return fmt.Errorf("invalid ENV %q (must be 'local' or 'prod')", c.Env)
 	}
 
 	switch c.LogLevel {
@@ -99,7 +99,7 @@ func Load() (*Config, error) {
 
 func (c *Config) Log() {
 	slog.Info("config loaded",
-		slog.String("APP_ENV", string(c.AppEnv)),
+		slog.String("ENV", string(c.Env)),
 		slog.String("LOG_LEVEL", c.LogLevel),
 		slog.String("SHORT_URL_BASE", c.ShortURLBase),
 		slog.String("REDIRECT_HOST", c.RedirectHost),
