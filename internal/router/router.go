@@ -63,15 +63,13 @@ func newAPIEngine(
 	r.Use(middleware.CORS(cfg.AllowedOrigins...))
 	r.Use(middleware.Recovery())
 
-	v1 := r.Group("/v1")
-
-	auth := v1.Group("/auth")
+	auth := r.Group("/auth")
 	{
 		auth.POST("/signup", wrap(userHandler.Signup))
 		auth.POST("/login", wrap(userHandler.Login))
 	}
 
-	links := v1.Group("/links")
+	links := r.Group("/links")
 	links.Use(middleware.Auth(tokenIssuer))
 	{
 		links.POST("", wrap(linkHandler.CreateLink))
