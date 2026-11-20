@@ -13,6 +13,7 @@ const (
 	CodeSlugAlreadyExists    ErrorCode = "SLUG_ALREADY_EXISTS"
 	CodeLinkQuotaExceeded    ErrorCode = "LINK_QUOTA_EXCEEDED"
 	CodeLinkNotFound         ErrorCode = "LINK_NOT_FOUND"
+	CodeUserNotFound         ErrorCode = "USER_NOT_FOUND"
 )
 
 type FieldErrorCode string

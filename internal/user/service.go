@@ -93,3 +93,12 @@ func (s *Service) Login(ctx context.Context, arg LoginParams) (*AuthResult, erro
 
 	return s.newAuthResult(user)
 }
+
+func (s *Service) GetUser(ctx context.Context, id string) (*User, error) {
+	user, err := s.userRepo.FindByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("find user by id: %w", err)
+	}
+
+	return user, nil
+}

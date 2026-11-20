@@ -69,6 +69,8 @@ func newAPIEngine(
 		auth.POST("/login", wrap(userHandler.Login))
 	}
 
+	r.GET("/me", middleware.Auth(tokenIssuer), wrap(userHandler.GetMe))
+
 	links := r.Group("/links")
 	links.Use(middleware.Auth(tokenIssuer))
 	{

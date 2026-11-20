@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/katatrina/url-shortener/internal/request"
 	"github.com/katatrina/url-shortener/internal/response"
+	"github.com/katatrina/url-shortener/internal/router/middleware"
 )
 
 type Handler struct {
@@ -53,6 +54,17 @@ func (h *Handler) Login(c *gin.Context) error {
 	)
 
 	res := newAuthResponse(result)
+
+	return response.Success(c, http.StatusOK, res)
+}
+
+func (h *Handler) GetMe(c *gin.Context) error {
+	user, err := h.userSvc.GetUser(c.Request.Context(), middleware.UserID(c))
+	if err != nil {
+		return err
+	}
+
+	res := newUserResponse(user)
 
 	return response.Success(c, http.StatusOK, res)
 }
