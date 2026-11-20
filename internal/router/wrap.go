@@ -44,6 +44,9 @@ func writeError(c *gin.Context, err error) {
 	case errors.Is(err, link.ErrLinkNotFound):
 		response.Fail(c, apperror.New(http.StatusNotFound,
 			apperror.CodeLinkNotFound, "Link not found"))
+	case errors.Is(err, user.ErrUserNotFound):
+		response.Fail(c, apperror.New(http.StatusNotFound,
+			apperror.CodeUserNotFound, "User not found"))
 	default:
 		slog.ErrorContext(c.Request.Context(), "unexpected error",
 			slog.String("method", c.Request.Method),
