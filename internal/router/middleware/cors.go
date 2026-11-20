@@ -22,8 +22,7 @@ func CORS(allowedOrigins ...string) gin.HandlerFunc {
 		}
 
 		// A CORS preflight is precisely an OPTIONS request carrying
-		// Access-Control-Request-Method. A bare OPTIONS is NOT a preflight,
-		// so we don't short-circuit it here.
+		// Access-Control-Request-Method.
 		isPreflight := c.Request.Method == http.MethodOptions &&
 			c.GetHeader("Access-Control-Request-Method") != ""
 
@@ -34,8 +33,9 @@ func CORS(allowedOrigins ...string) gin.HandlerFunc {
 				c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type")
 				c.Header("Access-Control-Max-Age", "86400")
 			}
+
 			// Answer the preflight regardless of origin: a disallowed origin
-			// gets 204 without Allow-Origin, which the browser blocks (fail closed).
+			// gets 204 without Allow-Origin, which the browser blocks.
 			c.AbortWithStatus(http.StatusNoContent)
 			return
 		}

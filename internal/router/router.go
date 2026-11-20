@@ -30,10 +30,6 @@ func New(
 	return normalizeHost(mux)
 }
 
-// newEngine builds an engine with the client IP policy both services share:
-// the platform header when one is configured, else the X-Forwarded-For chain,
-// else the socket address. The redirect engine needs it for click events,
-// the API engine for access logs.
 func newEngine(cfg *config.Config) *gin.Engine {
 	r := gin.New()
 	r.TrustedPlatform = cfg.TrustedPlatform
@@ -57,6 +53,7 @@ func newAPIEngine(
 	tokenIssuer *token.Issuer,
 ) *gin.Engine {
 	r := newEngine(cfg)
+	r.RedirectTrailingSlash = false
 
 	r.Use(middleware.RequestID())
 	r.Use(middleware.AccessLog())
