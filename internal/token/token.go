@@ -28,7 +28,7 @@ func NewIssuer(secret string, ttl time.Duration) *Issuer {
 	}
 }
 
-func (i *Issuer) Issue(userID string) (string, time.Duration, error) {
+func (i *Issuer) Issue(userID string) (string, error) {
 	now := time.Now()
 	expiresAt := now.Add(i.ttl)
 	claims := jwt.RegisteredClaims{
@@ -41,10 +41,10 @@ func (i *Issuer) Issue(userID string) (string, time.Duration, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenStr, err := token.SignedString(i.secret)
 	if err != nil {
-		return "", 0, err
+		return "", err
 	}
 
-	return tokenStr, i.ttl, nil
+	return tokenStr, nil
 }
 
 func (i *Issuer) Verify(tokenStr string) (userID string, err error) {

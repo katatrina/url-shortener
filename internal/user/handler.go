@@ -23,16 +23,16 @@ func (h *Handler) Signup(c *gin.Context) error {
 		return err
 	}
 
-	user, err := h.userSvc.Signup(c.Request.Context(), SignupParams(req))
+	result, err := h.userSvc.Signup(c.Request.Context(), SignupParams(req))
 	if err != nil {
 		return err
 	}
 
 	slog.InfoContext(c.Request.Context(), "user signed up",
-		slog.String("user_id", user.ID),
+		slog.String("user_id", result.User.ID),
 	)
 
-	res := newUserResponse(user)
+	res := newAuthResponse(result)
 
 	return response.Success(c, http.StatusCreated, res)
 }
@@ -52,7 +52,7 @@ func (h *Handler) Login(c *gin.Context) error {
 		slog.String("user_id", result.User.ID),
 	)
 
-	res := newLoginResponse(result)
+	res := newAuthResponse(result)
 
 	return response.Success(c, http.StatusOK, res)
 }

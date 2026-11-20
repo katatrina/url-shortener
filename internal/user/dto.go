@@ -23,9 +23,8 @@ func (r *LoginRequest) Normalize() {
 	r.Email = strings.ToLower(strings.TrimSpace(r.Email))
 }
 
-type LoginResponse struct {
+type AuthResponse struct {
 	AccessToken string       `json:"accessToken"`
-	ExpiresIn   int64        `json:"expiresIn"`
 	User        UserResponse `json:"user"`
 }
 
@@ -37,10 +36,9 @@ type UserResponse struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
-func newLoginResponse(r *LoginResult) LoginResponse {
-	return LoginResponse{
+func newAuthResponse(r *AuthResult) AuthResponse {
+	return AuthResponse{
 		AccessToken: r.AccessToken,
-		ExpiresIn:   int64(r.ExpiresIn.Seconds()),
 		User:        newUserResponse(r.User),
 	}
 }

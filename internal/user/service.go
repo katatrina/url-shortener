@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/katatrina/url-shortener/internal/token"
@@ -30,7 +29,24 @@ type SignupParams struct {
 	Password string
 }
 
-func (s *Service) Signup(ctx context.Context, arg SignupParams) (*User, error) {
+type AuthResult struct {
+	AccessToken string
+	User        *User
+}
+
+func (s *Service) newAuthResult(user *User) (*AuthResult, error) {
+	accessToken, err := s.tokenIssuer.Issue(user.ID)
+	if err != nil {
+		return nil, fmt.Errorf("issue token: %w", err)
+	}
+
+	return &AuthResult{
+		AccessToken: accessToken,
+		User:        user,
+	}, nil
+}
+
+func (s *Service) Signup(ctx context.Context, arg SignupParams) (*AuthResult, error) {
 	id, _ := uuid.NewV7()
 
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(arg.Password), bcryptCost)
@@ -47,7 +63,7 @@ func (s *Service) Signup(ctx context.Context, arg SignupParams) (*User, error) {
 		return nil, fmt.Errorf("insert user: %w", err)
 	}
 
-	return user, nil
+	return s.newAuthResult(user)
 }
 
 type LoginParams struct {
@@ -55,13 +71,7 @@ type LoginParams struct {
 	Password string
 }
 
-type LoginResult struct {
-	AccessToken string
-	ExpiresIn   time.Duration
-	User        *User
-}
-
-func (s *Service) Login(ctx context.Context, arg LoginParams) (*LoginResult, error) {
+func (s *Service) Login(ctx context.Context, arg LoginParams) (*AuthResult, error) {
 	user, err := s.userRepo.FindByEmail(ctx, arg.Email)
 	if err != nil {
 		if errors.Is(err, ErrUserNotFound) {
@@ -81,14 +91,5 @@ func (s *Service) Login(ctx context.Context, arg LoginParams) (*LoginResult, err
 		return nil, fmt.Errorf("compare password: %w", err)
 	}
 
-	accessToken, expiresIn, err := s.tokenIssuer.Issue(user.ID)
-	if err != nil {
-		return nil, fmt.Errorf("issue token: %w", err)
-	}
-
-	return &LoginResult{
-		AccessToken: accessToken,
-		ExpiresIn:   expiresIn,
-		User:        user,
-	}, nil
+	return s.newAuthResult(user)
 }
