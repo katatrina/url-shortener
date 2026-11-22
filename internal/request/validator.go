@@ -3,6 +3,7 @@ package request
 import (
 	"errors"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -27,6 +28,7 @@ func init() {
 	_ = validate.RegisterValidation("max_bytes", validateMaxBytes)
 	// _ = validate.RegisterValidation("strong_password", validateStrongPassword) // disabled: relaxed password policy
 	_ = validate.RegisterValidation("slug", validateSlug)
+	_ = validate.RegisterValidation("ascii_email", validateASCIIEmail)
 }
 
 // max_bytes counts BYTES, not runes — bcrypt only uses the first 72 bytes.
@@ -62,6 +64,15 @@ func validateSlug(fl validator.FieldLevel) bool {
 	return slug.IsValid(fl.Field().String())
 }
 
+// ASCII-only email, domain must contain a dot. The frontend uses the same regex; keep them in sync.
+const emailPattern = `^[A-Za-z0-9.!#$%&'*+/=?^_` + "`" + `{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$`
+
+var emailRegex = regexp.MustCompile(emailPattern)
+
+func validateASCIIEmail(fl validator.FieldLevel) bool {
+	return emailRegex.MatchString(fl.Field().String())
+}
+
 func AsValidationErrors(err error) ([]apperror.FieldError, bool) {
 	ve, ok := errors.AsType[validator.ValidationErrors](err)
 	if !ok {
@@ -82,7 +93,7 @@ func mapTag(tag string) apperror.FieldErrorCode {
 	switch tag {
 	case "required":
 		return apperror.FieldCodeRequired
-	case "email", "http_url", "slug":
+	case "ascii_email", "http_url", "slug":
 		return apperror.FieldCodeFormatInvalid
 	case "min", "gte":
 		return apperror.FieldCodeTooShort
@@ -99,12 +110,12 @@ func mapTag(tag string) apperror.FieldErrorCode {
 //
 //nolint:gosec
 var messages = map[string]string{
-	"required":  "{field} is required",
-	"email":     "{field} must be a valid email address",
-	"http_url":  "{field} must be a valid http or https URL",
-	"min":       "{field} must be at least {param} characters",
-	"max":       "{field} must be at most {param} characters",
-	"max_bytes": "{field} is too long",
+	"required":    "{field} is required",
+	"ascii_email": "{field} must be a valid email address",
+	"http_url":    "{field} must be a valid http or https URL",
+	"min":         "{field} must be at least {param} characters",
+	"max":         "{field} must be at most {param} characters",
+	"max_bytes":   "{field} is too long",
 	// "strong_password": "{field} must include an uppercase letter, a lowercase letter, a number, and a special character", // disabled: relaxed password policy
 	"slug": "{field} must contain only letters, digits, '-' or '_'",
 }
